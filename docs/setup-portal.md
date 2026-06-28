@@ -98,9 +98,9 @@ Ao final, você terá feito **com as suas próprias mãos**:
 
 ## ☁️ 3. Serviços Azure que vamos usar
 
-Tudo dentro de **um Resource Group** (`rg-fifa-bolao`), na região **Central India**
-(`centralindia`). Você escolhe um **sufixo único** (`<suffix>`, ex.: `joao2026`) que entra no
-nome dos recursos — porque vários nomes são **globais** no Azure.
+Tudo dentro de **um Resource Group** (`rg-prd-bl-cin-001`), na região **Central India**
+(`centralindia`). Os nomes seguem uma **taxonomia** padronizada (Seção 5) — você usa os nomes
+**exatamente como recomendados**; só precisa trocar algo se um nome **global** já estiver em uso.
 
 | Serviço Azure | Para que serve no Bolão | Camada / Custo |
 |---|---|---|
@@ -123,8 +123,9 @@ nome dos recursos — porque vários nomes são **globais** no Azure.
 
 > 🌍 **Nomes globais!** `cosmos-...`, `kv-...`, `app-...` e `func-...` viram **endereços
 > públicos** (`.documents.azure.com`, `.vault.azure.net`, `.azurewebsites.net`), então o nome
-> é **único no mundo**. É por isso que usamos o seu **`<suffix>`**. Se o Portal disser *"already
-> taken"*, troque o sufixo (ex.: acrescente suas iniciais) — **e use o novo em tudo**.
+> precisa ser **único no mundo**. Se o Portal disser *"already taken"*, **incremente a instância**
+> (`...-cin-002`, `-003`…) ou use um apelido curto no lugar do `001` — **e use o nome final nas
+> Variables do GitHub** (Fase 8).
 
 ---
 
@@ -140,7 +141,7 @@ O "mapa do estádio" — como as peças se encaixam quando tudo estiver no ar:
    ┌───────────────────────────┐   /api/* (HTTPS+CORS)  ┌───────────────────────────┐
    │  🌐 WEB APP — FRONTEND     │ ────────────────────▶ │  🌐 WEB APP — API          │
    │  React (SPA) + Express     │                       │  Express 5 (Node 20)       │
-   │  app-fifa-bolao-web-<sfx>  │                       │  app-fifa-bolao-<sfx>      │
+   │  app-prd-bl-fend-cin-001   │                       │  app-prd-bl-bend-cin-001   │
    └───────────────────────────┘                       └──────────────┬────────────┘
                                                           Cosmos SDK   │   SignalR SDK
                                                                        ▼
@@ -154,7 +155,7 @@ O "mapa do estádio" — como as peças se encaixam quando tudo estiver no ar:
               │ segredos via Managed Identity                          ▼
    ┌──────────┴──────────┐                              ┌───────────────────────────┐
    │  🔑 KEY VAULT        │                              │  🟧 AZURE SIGNALR SERVICE  │
-   │  kv-bolao-<sfx>      │                              │  Hub: leaderboard 🏅       │
+   │  kv-prd-bl-cin-001   │                              │  Hub: leaderboard 🏅       │
    └─────────────────────┘                              └───────────────────────────┘
         📈 APP INSIGHTS ── logs/métricas de tudo acima      💾 STORAGE ── runtime das Functions
 ```
@@ -181,45 +182,49 @@ O "mapa do estádio" — como as peças se encaixam quando tudo estiver no ar:
 
 ## 🧩 5. Taxonomia de nomes (convenção recomendada, porém flexível)
 
-Os recursos seguem uma **convenção de taxonomia** `<tipo>-fifa-bolao-<suffix>` — mas **você não
-fica preso a ela**. A esteira de deploy (Fase 8) **lê os nomes das Variables do GitHub**, então
-**não há dependência rígida de prefixo**: escolha seus nomes (seguindo a convenção ou não) e
-**preencha-os nas Variables**; o deploy usa o que você colocar lá.
+Os recursos seguem o padrão de taxonomia **`<tipo>-<ambiente>-<carga>-<região>-<instância>`**:
 
-> 🧠 **A única regra:** o nome que você **criar no Portal** tem que ser **idêntico** ao que você
-> **colocar na Variable** do GitHub. (Maiúsculas/minúsculas e hífens contam.)
+| Segmento | Valor no lab | Significa |
+|---|---|---|
+| `<tipo>` | `rg`, `app`, `func`, `cosmos`, `kv`, `asp`, `st`, `signalr`, `log`, `appi`, `vnet`, `pe` | o tipo do recurso |
+| `<ambiente>` | `prd` | ambiente (production-like) |
+| `<carga>` | `bl` | a aplicação (**bl** = Bolão) |
+| `<carga-sufixo>` | `bend` / `fend` | só nos Web Apps: **b**ack**end** (API) e **f**ront**end** |
+| `<região>` | `cin` | **C**entral **In**dia |
+| `<instância>` | `001` | número da instância (use `002`, `003`… se o nome global já existir) |
 
-> 💡 **Não quer pensar em nomes?** Use exatamente a coluna **"Nome recomendado"** (troque só o
-> `<suffix>`) — é o caminho mais simples e o resto do guia usa esses nomes. Quer nomes próprios?
-> Informe-os na coluna **"Variable do GitHub"** na Fase 8.
+> 💡 **Use os nomes da coluna "Nome recomendado" exatamente como estão** — o resto do guia usa
+> esses nomes. A esteira de deploy (Fase 8) **lê os nomes das Variables do GitHub**, então se
+> você precisar mudar algum (ex.: nome global já em uso → bumpar para `-002`), é só refletir a
+> mudança na Variable correspondente. **A única regra:** o nome no Portal = o nome na Variable.
 
 **Recursos que o deploy precisa conhecer** (vão para as Variables na Fase 8):
 
 | Recurso | Nome recomendado | Variable do GitHub |
 |---|---|---|
-| Resource Group | `rg-fifa-bolao` | `AZURE_RG` |
-| Cosmos DB (conta) | `cosmos-fifa-bolao-<suffix>` | `COSMOS_ACCOUNT_NAME` |
-| Key Vault | `kv-bolao-<suffix>` | `KEY_VAULT_NAME` |
-| Web App — API | `app-fifa-bolao-<suffix>` | `API_APP_NAME` |
-| Web App — Frontend | `app-fifa-bolao-web-<suffix>` | `FRONTEND_APP_NAME` |
-| Function App | `func-fifa-bolao-<suffix>` | `FUNCTION_APP_NAME` |
+| Resource Group | `rg-prd-bl-cin-001` | `AZURE_RG` |
+| Cosmos DB (conta) | `cosmos-prd-bl-cin-001` | `COSMOS_ACCOUNT_NAME` |
+| Key Vault | `kv-prd-bl-cin-001` | `KEY_VAULT_NAME` |
+| Web App — API | `app-prd-bl-bend-cin-001` | `API_APP_NAME` |
+| Web App — Frontend | `app-prd-bl-fend-cin-001` | `FRONTEND_APP_NAME` |
+| Function App | `func-prd-bl-cin-001` | `FUNCTION_APP_NAME` |
 
 **Recursos que só você usa no Portal** (a CI não precisa do nome):
 
 | Recurso | Nome recomendado | Observação |
 |---|---|---|
-| Log Analytics Workspace | `log-fifa-bolao-<suffix>` | backing do App Insights |
-| Application Insights | `ai-fifa-bolao-<suffix>` | observabilidade |
-| Storage Account | `stfifabolao<suffix>` | **minúsculas, sem hífen, ≤ 24 chars** |
-| SignalR Service | `signalr-fifa-bolao-<suffix>` | tempo real |
-| App Service Plan | `plan-fifa-bolao-<suffix>` | B1 Linux; hospeda os 2 Web Apps |
-| _(Fase 11)_ Virtual Network | `vnet-fifa-bolao` | `10.20.0.0/16` |
-| _(Fase 11)_ Private Endpoint | `pe-cosmos-fifa-bolao` | IP privado do Cosmos |
+| Log Analytics Workspace | `log-prd-bl-cin-001` | backing do App Insights |
+| Application Insights | `appi-prd-bl-cin-001` | observabilidade |
+| Storage Account | `stprdbl001` | **minúsculas, sem hífen, ≤ 24 chars** |
+| SignalR Service | `signalr-prd-bl-cin-001` | tempo real |
+| App Service Plan | `asp-prd-bl-cin-001` | B1 Linux; hospeda os 2 Web Apps |
+| _(Fase 11)_ Virtual Network | `vnet-prd-bl-cin-001` | `10.20.0.0/16` |
+| _(Fase 11)_ Private Endpoint | `pe-cosmos-prd-bl-cin-001` | IP privado do Cosmos |
 
-> 📌 **Anote os nomes que você escolher.** **Nomes globais** (`cosmos-`, `kv-`, `app-`, `func-`,
-> storage) precisam ser **únicos no mundo** — se o Portal disser *"already taken"*, troque o
-> sufixo e use o novo (inclusive na Variable correspondente). Daqui pra frente o guia escreve os
-> **nomes recomendados** (com `<suffix>`); se você usou nomes próprios, leia "o seu equivalente".
+> 📌 **Anote os nomes finais.** **Nomes globais** (`cosmos-`, `kv-`, `app-`, `func-`, storage)
+> precisam ser **únicos no mundo** — se o Portal disser *"already taken"*, **incremente a
+> instância** (`...-cin-002`) e use o novo (inclusive na Variable correspondente). Daqui pra
+> frente o guia escreve os **nomes recomendados** — se você mudou algum, leia "o seu equivalente".
 
 ---
 
@@ -227,7 +232,7 @@ fica preso a ela**. A esteira de deploy (Fase 8) **lê os nomes das Variables do
 
 | Fase | Etapa | Tempo |
 |---|---|---|
-| **0** | Pré-jogo: pré-requisitos (Azure, GitHub, sufixo, orçamento) | 10 min |
+| **0** | Pré-jogo: pré-requisitos (Azure, GitHub, nomes, orçamento) | 10 min |
 | **1** | Convocação: **fork** do repositório (no GitHub, sem terminal) | 5 min |
 | **2** | Fundação: Resource Group + Log Analytics + App Insights | 8 min |
 | **3** | O banco: **Cosmos DB (rede pública)** + os **14 containers** | 15 min |
@@ -251,8 +256,9 @@ fica preso a ela**. A esteira de deploy (Fase 8) **lê os nomes das Variables do
 - [ ] **Conta Azure ativa** — trial (US$200 / 30 dias, https://azure.microsoft.com/free) ou uma
       assinatura sua.
 - [ ] **Conta GitHub** (gratuita) — você vai **fazer o fork** do repositório.
-- [ ] **Um sufixo único** seu (`<suffix>`, 3–12 letras minúsculas/números, ex.: `joao2026`).
-      **Anote** — vai aparecer em tudo.
+- [ ] **A taxonomia de nomes** (Seção 5) em mãos — você vai criar os recursos com esses nomes.
+      Não precisa inventar sufixo: use os nomes recomendados (só bumpe a instância `-001`→`-002`
+      se um nome global já existir).
 - [ ] **Bloco de notas** para anotar **endpoints e URLs**. ⚠️ **NÃO** anote segredos em texto —
       eles vivem **só** no Key Vault.
 - [ ] **Navegador moderno.** (Nenhuma instalação local: o pouco de terminal roda no **Azure
@@ -270,8 +276,8 @@ fica preso a ela**. A esteira de deploy (Fase 8) **lê os nomes das Variables do
 **Alerta de orçamento (recomendado):** Portal → busca **Cost Management** → **Budgets** →
 **+ Add** → **US$20/mês**, alerta em 80% e 100% → seu e-mail. (O lab é barato, mas o hábito é bom.)
 
-> ✅ **Pronto quando:** você tem conta Azure + conta GitHub, escolheu o `<suffix>` e decidiu a
-> região.
+> ✅ **Pronto quando:** você tem conta Azure + conta GitHub, tem a tabela de nomes (Seção 5) e
+> decidiu a região.
 
 ---
 
@@ -308,28 +314,28 @@ fica preso a ela**. A esteira de deploy (Fase 8) **lê os nomes das Variables do
 #### 2.1 Resource Group
 
 1. Portal → busca **Resource groups** → **+ Create**.
-2. **Subscription:** a sua · **Resource group:** `rg-fifa-bolao`
+2. **Subscription:** a sua · **Resource group:** `rg-prd-bl-cin-001`
 3. **Region:** **Central India** (a região da Fase 0).
 4. **Review + create** → **Create**.
 
 #### 2.2 Log Analytics Workspace
 
 1. Portal → busca **Log Analytics workspaces** → **+ Create**.
-2. **Resource group:** `rg-fifa-bolao` · **Name:** `log-fifa-bolao-<suffix>`
+2. **Resource group:** `rg-prd-bl-cin-001` · **Name:** `log-prd-bl-cin-001`
 3. **Region:** Central India.
 4. **Review + create** → **Create**.
 
 #### 2.3 Application Insights
 
 1. Portal → busca **Application Insights** → **+ Create**.
-2. **Resource group:** `rg-fifa-bolao` · **Name:** `ai-fifa-bolao-<suffix>` · **Region:** Central India.
-3. **Resource Mode:** **Workspace-based** → **Log Analytics Workspace:** o `log-fifa-bolao-<suffix>` (2.2).
+2. **Resource group:** `rg-prd-bl-cin-001` · **Name:** `appi-prd-bl-cin-001` · **Region:** Central India.
+3. **Resource Mode:** **Workspace-based** → **Log Analytics Workspace:** o `log-prd-bl-cin-001` (2.2).
 4. **Review + create** → **Create**.
 5. Abra o recurso → **Overview** → 📋 **anote a `Connection String`** (vai nas app settings).
 
 > 💡 O Portal pode criar automaticamente "Failure Anomalies" / "Smart Detection" — é esperado.
 
-> ✅ **Pronto quando:** o `rg-fifa-bolao` tem o Log Analytics e o App Insights, e você anotou a
+> ✅ **Pronto quando:** o `rg-prd-bl-cin-001` tem o Log Analytics e o App Insights, e você anotou a
 > **Connection String** do App Insights.
 
 ---
@@ -345,7 +351,7 @@ fica preso a ela**. A esteira de deploy (Fase 8) **lê os nomes das Variables do
 #### 3.1 Criar a conta Cosmos
 
 1. Portal → **Create a resource** → **Azure Cosmos DB** → **Create** → **Azure Cosmos DB for NoSQL** → **Create**.
-2. **Account Name:** `cosmos-fifa-bolao-<suffix>` · **Location:** **Central India**
+2. **Account Name:** `cosmos-prd-bl-cin-001` · **Location:** **Central India**
 3. **Capacity mode:** **Provisioned throughput**
 4. ✅ **Apply Free Tier Discount** (1000 RU/s grátis).
    > ⚠️ **Só pode haver 1 conta Cosmos com Free Tier por assinatura.** Se você já tem outra na
@@ -402,7 +408,7 @@ existente** → **Don't provision dedicated throughput** (usa o throughput do da
 
 Na conta Cosmos → **Settings → Keys**. 📋 Anote (vai usar nos segredos do Key Vault e no seed):
 
-- **URI** — ex.: `https://cosmos-fifa-bolao-<suffix>.documents.azure.com:443/`
+- **URI** — ex.: `https://cosmos-prd-bl-cin-001.documents.azure.com:443/`
 - **PRIMARY KEY** (chave longa)
 - **PRIMARY CONNECTION STRING** (formato `AccountEndpoint=...;AccountKey=...;`)
 
@@ -422,7 +428,7 @@ Na conta Cosmos → **Settings → Keys**. 📋 Anote (vai usar nos segredos do 
 #### 4.1 Storage Account
 
 1. Portal → **Storage accounts** → **+ Create**.
-2. **Resource group:** `rg-fifa-bolao` · **Name:** `stfifabolao<suffix>`
+2. **Resource group:** `rg-prd-bl-cin-001` · **Name:** `stprdbl001`
    _(⚠️ minúsculas, **sem hífen**, no máximo 24 caracteres)._
 3. **Region:** Central India · **Performance:** Standard · **Redundancy:** **LRS**.
 4. Aba **Security:** TLS 1.2 mínimo · **Allow blob anonymous access:** Disabled.
@@ -434,7 +440,7 @@ Na conta Cosmos → **Settings → Keys**. 📋 Anote (vai usar nos segredos do 
 #### 4.2 SignalR Service
 
 1. Portal → busca **SignalR Service** → **+ Create**.
-2. **Resource group:** `rg-fifa-bolao` · **Name:** `signalr-fifa-bolao-<suffix>` · **Region:** Central India.
+2. **Resource group:** `rg-prd-bl-cin-001` · **Name:** `signalr-prd-bl-cin-001` · **Region:** Central India.
 3. **Pricing tier:** **Free_F1** · **Service mode:** **Serverless**.
 4. **Review + create** → **Create**.
 5. Abra o recurso → **Settings → Keys** → 📋 **anote a `Primary Connection String`** (vira o
@@ -455,7 +461,7 @@ Na conta Cosmos → **Settings → Keys**. 📋 Anote (vai usar nos segredos do 
 #### 5.1 Criar o Key Vault
 
 1. Portal → busca **Key vaults** → **+ Create**.
-2. **Resource group:** `rg-fifa-bolao` · **Name:** `kv-bolao-<suffix>` · **Region:** Central India.
+2. **Resource group:** `rg-prd-bl-cin-001` · **Name:** `kv-prd-bl-cin-001` · **Region:** Central India.
 3. **Pricing tier:** Standard · **Soft-delete:** Enabled (padrão), retenção 90 dias.
 4. Aba **Access configuration → Permission model:** **Azure role-based access control (RBAC)**
    ⚠️ (não escolha "Vault access policy" — o resto do guia assume **RBAC**).
@@ -503,7 +509,7 @@ No Key Vault → **Objects → Secrets → + Generate/Import** e crie **um por u
 #### 6.1 App Service Plan
 
 1. Portal → busca **App Service plans** → **+ Create**.
-2. **Resource group:** `rg-fifa-bolao` · **Name:** `plan-fifa-bolao-<suffix>`
+2. **Resource group:** `rg-prd-bl-cin-001` · **Name:** `asp-prd-bl-cin-001`
 3. **Operating System:** **Linux** · **Region:** Central India.
 4. **Pricing plan:** **Basic B1** (suporta "Always On"; ~US$13/mês).
 5. **Review + create** → **Create**.
@@ -517,11 +523,11 @@ No Key Vault → **Objects → Secrets → + Generate/Import** e crie **um por u
 #### 6.2 Web App — API
 
 1. Portal → **App Services** → **+ Create** → **Web App**.
-2. **Resource group:** `rg-fifa-bolao` · **Name:** `app-fifa-bolao-<suffix>`
+2. **Resource group:** `rg-prd-bl-cin-001` · **Name:** `app-prd-bl-bend-cin-001`
 3. **Publish:** **Code** · **Runtime stack:** **Node 20 LTS** · **OS:** **Linux** · **Region:** Central India.
-4. **App Service Plan:** selecione o `plan-fifa-bolao-<suffix>` (6.1) → **Review + create** → **Create**.
+4. **App Service Plan:** selecione o `asp-prd-bl-cin-001` (6.1) → **Review + create** → **Create**.
 
-**Após criar**, abra o `app-fifa-bolao-<suffix>`:
+**Após criar**, abra o `app-prd-bl-bend-cin-001`:
 
 5. **Settings → Identity → System assigned → Status: On** → **Save**. _(Cria a Managed Identity —
    usamos na Fase 7.)_
@@ -536,11 +542,11 @@ No Key Vault → **Objects → Secrets → + Generate/Import** e crie **um por u
 #### 6.3 Web App — Frontend
 
 1. Portal → **App Services** → **+ Create** → **Web App**.
-2. **Resource group:** `rg-fifa-bolao` · **Name:** `app-fifa-bolao-web-<suffix>`
+2. **Resource group:** `rg-prd-bl-cin-001` · **Name:** `app-prd-bl-fend-cin-001`
 3. **Publish:** Code · **Runtime:** **Node 20 LTS** · **OS:** Linux · **Region:** Central India.
-4. **App Service Plan:** o **mesmo** `plan-fifa-bolao-<suffix>` → **Review + create** → **Create**.
+4. **App Service Plan:** o **mesmo** `asp-prd-bl-cin-001` → **Review + create** → **Create**.
 
-**Após criar**, abra o `app-fifa-bolao-web-<suffix>` → **Settings → Configuration → General settings:**
+**Após criar**, abra o `app-prd-bl-fend-cin-001` → **Settings → Configuration → General settings:**
 - **HTTPS Only:** On · **Min TLS:** 1.2 · **Always On:** On
 - **Startup Command:** `node server.js`
 - **Save**.
@@ -551,14 +557,14 @@ No Key Vault → **Objects → Secrets → + Generate/Import** e crie **um por u
 #### 6.4 Function App (pontuação)
 
 1. Portal → busca **Function App** → **+ Create** → hosting **Consumption (Serverless)**.
-2. **Resource group:** `rg-fifa-bolao` · **Name:** `func-fifa-bolao-<suffix>`
+2. **Resource group:** `rg-prd-bl-cin-001` · **Name:** `func-prd-bl-cin-001`
 3. **Runtime stack:** **Node.js** · **Version:** **20 LTS** · **Region:** Central India.
 4. **Operating System:** **Windows** _(o plano Consumo Linux nem sempre está disponível na
    região; Windows + Node é o caminho mais estável para as Functions)._
-5. **Storage account:** selecione a `stfifabolao<suffix>` (4.1).
+5. **Storage account:** selecione a `stprdbl001` (4.1).
 6. **Review + create** → **Create**.
 
-**Após criar**, abra a `func-fifa-bolao-<suffix>`:
+**Após criar**, abra a `func-prd-bl-cin-001`:
 
 7. **Settings → Identity → System assigned → Status: On** → **Save**. _(Managed Identity das
    Functions — também recebe acesso ao Key Vault na Fase 7.)_
@@ -581,12 +587,12 @@ No Key Vault → **Objects → Secrets → + Generate/Import** e crie **um por u
 
 #### 7.1 Dar acesso das identidades ao Key Vault (RBAC)
 
-1. Key Vault `kv-bolao-<suffix>` → **Access control (IAM)** → **+ Add → Add role assignment**.
+1. Key Vault `kv-prd-bl-cin-001` → **Access control (IAM)** → **+ Add → Add role assignment**.
 2. **Role:** **Key Vault Secrets User** → **Next**.
 3. **Assign access to:** **Managed identity** → **+ Select members** → selecione a Managed
-   Identity do **`app-fifa-bolao-<suffix>`** (a API).
+   Identity do **`app-prd-bl-bend-cin-001`** (a API).
 4. **Review + assign**.
-5. **Repita** os passos 1–4 para a Managed Identity do **`func-fifa-bolao-<suffix>`** (as Functions).
+5. **Repita** os passos 1–4 para a Managed Identity do **`func-prd-bl-cin-001`** (as Functions).
 
 > 💡 **Por que duas?** A API lê `cosmos-*`, `jwt-secret` e `signalr-connection-string`. As
 > Functions leem o `signalr-connection-string` (via referência) quando você **não** usa o
@@ -594,20 +600,20 @@ No Key Vault → **Objects → Secrets → + Generate/Import** e crie **um por u
 
 #### 7.2 App Settings da API (segredos por referência + CORS aberto)
 
-Web App **API** (`app-fifa-bolao-<suffix>`) → **Settings → Environment variables → App settings**
+Web App **API** (`app-prd-bl-bend-cin-001`) → **Settings → Environment variables → App settings**
 → adicione **uma por uma** (**+ Add**). Para os segredos, use a sintaxe de **referência**:
 
 ```
-@Microsoft.KeyVault(SecretUri=https://kv-bolao-<suffix>.vault.azure.net/secrets/<nome-do-secret>)
+@Microsoft.KeyVault(SecretUri=https://kv-prd-bl-cin-001.vault.azure.net/secrets/<nome-do-secret>)
 ```
 
 | Name | Value |
 |---|---|
-| `COSMOS_ENDPOINT` | `@Microsoft.KeyVault(SecretUri=https://kv-bolao-<suffix>.vault.azure.net/secrets/cosmos-endpoint)` |
-| `COSMOS_KEY` | `@Microsoft.KeyVault(SecretUri=https://kv-bolao-<suffix>.vault.azure.net/secrets/cosmos-key)` |
-| `COSMOS_DATABASE` | `@Microsoft.KeyVault(SecretUri=https://kv-bolao-<suffix>.vault.azure.net/secrets/cosmos-database)` |
-| `JWT_SECRET` | `@Microsoft.KeyVault(SecretUri=https://kv-bolao-<suffix>.vault.azure.net/secrets/jwt-secret)` |
-| `SIGNALR_CONNECTION_STRING` | `@Microsoft.KeyVault(SecretUri=https://kv-bolao-<suffix>.vault.azure.net/secrets/signalr-connection-string)` |
+| `COSMOS_ENDPOINT` | `@Microsoft.KeyVault(SecretUri=https://kv-prd-bl-cin-001.vault.azure.net/secrets/cosmos-endpoint)` |
+| `COSMOS_KEY` | `@Microsoft.KeyVault(SecretUri=https://kv-prd-bl-cin-001.vault.azure.net/secrets/cosmos-key)` |
+| `COSMOS_DATABASE` | `@Microsoft.KeyVault(SecretUri=https://kv-prd-bl-cin-001.vault.azure.net/secrets/cosmos-database)` |
+| `JWT_SECRET` | `@Microsoft.KeyVault(SecretUri=https://kv-prd-bl-cin-001.vault.azure.net/secrets/jwt-secret)` |
+| `SIGNALR_CONNECTION_STRING` | `@Microsoft.KeyVault(SecretUri=https://kv-prd-bl-cin-001.vault.azure.net/secrets/signalr-connection-string)` |
 | `JWT_EXPIRES_IN` | `7d` |
 | `NODE_ENV` | `production` |
 | `PORT` | `8080` |
@@ -660,9 +666,9 @@ escopo só no seu Resource Group** (boa prática):
 ```bash
 SUB_ID=$(az account show --query id -o tsv)
 az ad sp create-for-rbac \
-  --name "bolao-deploy-<suffix>" \
+  --name "bolao-deploy-bl" \
   --role Contributor \
-  --scopes /subscriptions/$SUB_ID/resourceGroups/rg-fifa-bolao \
+  --scopes /subscriptions/$SUB_ID/resourceGroups/rg-prd-bl-cin-001 \
   --json-auth
 ```
 
@@ -670,7 +676,7 @@ az ad sp create-for-rbac \
 `AZURE_CREDENTIALS` no GitHub.
 
 > 💡 **O que é isso?** Uma "conta de robô" que o GitHub Actions usa para logar no Azure e
-> publicar. O `--scopes` limita o poder dela **só** ao `rg-fifa-bolao`. Em CLIs antigas, troque
+> publicar. O `--scopes` limita o poder dela **só** ao `rg-prd-bl-cin-001`. Em CLIs antigas, troque
 > `--json-auth` por `--sdk-auth`.
 
 #### 8.2 Configurar Secrets e Variables no seu fork
@@ -684,32 +690,26 @@ No **seu fork** no GitHub → **Settings → Secrets and variables → Actions**
 | `AZURE_CREDENTIALS` | o **JSON inteiro** do passo 8.1 |
 | `SIGNALR_CONNECTION_STRING` | a Primary Connection String do SignalR (4.2) — _opcional, mas recomendado para o tempo real_ |
 
-**Aba *Variables* → *New repository variable*:** aqui você **informa os nomes dos seus
-recursos** — é assim que a esteira sabe **onde** publicar, **sem dependência rígida de prefixo**.
-Escolha **um** dos dois jeitos:
+**Aba *Variables* → *New repository variable*:** aqui você **informa os nomes dos seus recursos**
+— é assim que a esteira sabe **onde** publicar. Preencha cada uma com o **nome que você criou no
+Portal** (a coluna de exemplo usa os nomes recomendados da Seção 5; se você bumpou alguma
+instância para `-002`, reflita aqui):
 
-**▶️ Jeito simples** — você usou os **nomes recomendados** (Seção 5). Basta o sufixo:
-
-| Variable | Valor |
+| Variable | Valor (exemplo com os nomes recomendados) |
 |---|---|
-| `NAME_SUFFIX` | o seu **`<suffix>`** (ex.: `joao2026`) |
-| `AZURE_RG` | o nome do seu Resource Group (ex.: `rg-fifa-bolao`) |
-| `VITE_API_BASE_URL` | `https://app-fifa-bolao-<suffix>.azurewebsites.net/api` (URL da sua **API** + `/api`) |
-| `PUBLIC_BASE_URL` | `https://app-fifa-bolao-web-<suffix>.azurewebsites.net` (URL do seu **frontend**) |
+| `AZURE_RG` | `rg-prd-bl-cin-001` |
+| `API_APP_NAME` | `app-prd-bl-bend-cin-001` |
+| `FRONTEND_APP_NAME` | `app-prd-bl-fend-cin-001` |
+| `FUNCTION_APP_NAME` | `func-prd-bl-cin-001` |
+| `COSMOS_ACCOUNT_NAME` | `cosmos-prd-bl-cin-001` |
+| `KEY_VAULT_NAME` | `kv-prd-bl-cin-001` |
+| `VITE_API_BASE_URL` | `https://app-prd-bl-bend-cin-001.azurewebsites.net/api` (URL da **API** + `/api`) |
+| `PUBLIC_BASE_URL` | `https://app-prd-bl-fend-cin-001.azurewebsites.net` (URL do **frontend**) |
 
-**▶️ Jeito flexível** — você **escolheu nomes próprios**. Informe cada um (têm **prioridade**
-sobre o `NAME_SUFFIX`):
-
-| Variable | Valor |
-|---|---|
-| `AZURE_RG` | o nome do seu Resource Group |
-| `API_APP_NAME` | o nome do seu Web App de **API** |
-| `FRONTEND_APP_NAME` | o nome do seu Web App de **frontend** |
-| `FUNCTION_APP_NAME` | o nome da sua **Function App** |
-| `COSMOS_ACCOUNT_NAME` | o nome da sua conta **Cosmos** |
-| `KEY_VAULT_NAME` | o nome do seu **Key Vault** |
-| `VITE_API_BASE_URL` | `https://<sua-api>.azurewebsites.net/api` |
-| `PUBLIC_BASE_URL` | `https://<seu-frontend>.azurewebsites.net` |
+> 🧠 **Por que informar cada nome?** A esteira **não adivinha** prefixo nenhum — ela publica
+> **exatamente** nos recursos que você nomear aqui. É isso que deixa a taxonomia flexível: mudou um
+> nome no Portal (ex.: instância `-002`)? Basta refletir na Variable. **Regra de ouro:** o nome na
+> Variable = o nome no Portal (maiúsculas/minúsculas e hífens contam).
 
 > 🔎 **`VITE_API_BASE_URL` é essencial neste lab (sem Front Door).** Ele é **embutido no build**
 > do frontend e diz **onde está a API**. Como não há Front Door, precisa ser a **URL absoluta**
@@ -730,16 +730,16 @@ sobre o `NAME_SUFFIX`):
 > isso some, porque front e API viram a **mesma** origem (`/api` relativo) e não há "cross-origin".
 
 > 💡 **`PUBLIC_BASE_URL` é opcional.** Se você não definir, a esteira **deriva sozinha** a URL do
-> **seu** frontend (a partir do `FRONTEND_APP_NAME`/`NAME_SUFFIX`). Defina explicitamente só se
-> quiser apontar os smoke tests para outro lugar.
+> **seu** frontend (a partir do `FRONTEND_APP_NAME`). Defina explicitamente só se quiser apontar
+> os smoke tests para outro lugar.
 
 > 🛡️ **Proteção contra "bater na prod":** no **seu fork**, os smoke tests **nunca** apontam para
-> a aplicação de produção da TFTEC — a esteira deriva tudo dos **seus** recursos. E o deploy de
-> fato roda com a **sua** credencial Azure (sua subscription), então é **impossível** publicar na
-> prod da TFTEC. ⚠️ Só **não use `tftec01`** como sufixo (é o de produção) — escolha o seu.
+> a aplicação de produção da TFTEC — a esteira deriva tudo dos **seus** recursos (as Variables que
+> você preencheu). E o deploy de fato roda com a **sua** credencial Azure (sua subscription), então
+> é **impossível** publicar na prod da TFTEC.
 
-> 💡 **Nada de editar o `deploy.yml`!** Tudo é feito por **Variables** — é só preencher. A
-> esteira lê os nomes das Variables e cai nos nomes recomendados só quando você não informa.
+> 💡 **Nada de editar o `deploy.yml`!** Tudo é feito por **Variables** — é só preencher. A esteira
+> publica exatamente nos recursos que você nomeou nas Variables.
 
 #### 8.3 Disparar o deploy
 
@@ -785,7 +785,7 @@ cd bolao
 npm install
 
 # 2) aponte para o SEU Cosmos (cole os valores da Fase 3.4)
-export COSMOS_ENDPOINT="https://cosmos-fifa-bolao-<suffix>.documents.azure.com:443/"
+export COSMOS_ENDPOINT="https://cosmos-prd-bl-cin-001.documents.azure.com:443/"
 export COSMOS_KEY="<sua PRIMARY KEY>"
 export COSMOS_DATABASE="bolao2026"
 
@@ -820,15 +820,15 @@ jogadores**, leaderboard inicializado.
 
 #### 10.1 Smoke test rápido (do seu navegador)
 
-- [ ] **API viva:** abra `https://app-fifa-bolao-<suffix>.azurewebsites.net/api/health` → JSON
+- [ ] **API viva:** abra `https://app-prd-bl-bend-cin-001.azurewebsites.net/api/health` → JSON
       com `"status":"ok"`.
-- [ ] **API + banco:** `https://app-fifa-bolao-<suffix>.azurewebsites.net/api/health/full` →
+- [ ] **API + banco:** `https://app-prd-bl-bend-cin-001.azurewebsites.net/api/health/full` →
       `"ok":true` (a API conseguiu falar com o Cosmos).
-- [ ] **API tem dados:** `https://app-fifa-bolao-<suffix>.azurewebsites.net/api/matches` → deve
+- [ ] **API tem dados:** `https://app-prd-bl-bend-cin-001.azurewebsites.net/api/matches` → deve
       trazer **72** jogos.
-- [ ] **Frontend vivo:** `https://app-fifa-bolao-web-<suffix>.azurewebsites.net/healthz` → `ok`.
-- [ ] **Site abre:** `https://app-fifa-bolao-web-<suffix>.azurewebsites.net/` → carrega a tela de login.
-- [ ] **Functions registradas:** Portal → `func-fifa-bolao-<suffix>` → **Functions** → devem
+- [ ] **Frontend vivo:** `https://app-prd-bl-fend-cin-001.azurewebsites.net/healthz` → `ok`.
+- [ ] **Site abre:** `https://app-prd-bl-fend-cin-001.azurewebsites.net/` → carrega a tela de login.
+- [ ] **Functions registradas:** Portal → `func-prd-bl-cin-001` → **Functions** → devem
       aparecer **6**: `calc-predictions`, `calc-specials`, `aggregate-from-predictions`,
       `aggregate-from-specials`, `emit-leaderboard-update`, `health-check-cron`.
 
@@ -866,21 +866,21 @@ jogadores**, leaderboard inicializado.
 
 A porta mais barata de fechar primeiro: parar de aceitar **qualquer** origem.
 
-1. Web App **API** (`app-fifa-bolao-<suffix>`) → **Settings → Environment variables → App
+1. Web App **API** (`app-prd-bl-bend-cin-001`) → **Settings → Environment variables → App
    settings** → edite `CORS_ORIGINS`:
    - de `*`
-   - para `https://app-fifa-bolao-web-<suffix>.azurewebsites.net` **(sem barra `/` no fim)**
+   - para `https://app-prd-bl-fend-cin-001.azurewebsites.net` **(sem barra `/` no fim)**
 2. **Apply / Save** (a API reinicia).
 
 > ⚠️ **Sem a barra final!** `CORS_ORIGINS` precisa bater **exatamente** com a origem do
 > navegador. `https://...net/` (com `/`) **não** casa com `https://...net` e o navegador bloqueia.
 
 **🧪 Teste (obrigatório antes de seguir):**
-- Abra o site `https://app-fifa-bolao-web-<suffix>.azurewebsites.net/`, **faça logout e login** de
+- Abra o site `https://app-prd-bl-fend-cin-001.azurewebsites.net/`, **faça logout e login** de
   novo, navegue pelas telas. Tudo deve funcionar **igual à Fase 10**.
 - ❌ Se as chamadas começarem a falhar (erro de CORS no console do navegador, F12): a URL em
-  `CORS_ORIGINS` está diferente da real (barra `/`, `http` vs `https`, sufixo errado). **Corrija
-  ou volte para `*`** e confira.
+  `CORS_ORIGINS` está diferente da real (barra `/`, `http` vs `https`, nome do app errado).
+  **Corrija ou volte para `*`** e confira.
 
 > ✅ **Pronto quando:** o site funciona com `CORS_ORIGINS` na URL específica do front.
 
@@ -903,7 +903,7 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
 **(a) Criar a VNet + 2 subnets**
 
 1. Portal → **Virtual networks** → **+ Create**.
-2. **Resource group:** `rg-fifa-bolao` · **Name:** `vnet-fifa-bolao` · **Region:** **Central
+2. **Resource group:** `rg-prd-bl-cin-001` · **Name:** `vnet-prd-bl-cin-001` · **Region:** **Central
    India** (a **mesma** dos apps — obrigatório).
 3. Aba **IP Addresses:** address space **`10.20.0.0/16`**. Crie **2 subnets**:
 
@@ -916,19 +916,19 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
 
 **(b) Private Endpoint do Cosmos (+ Private DNS)**
 
-1. Cosmos `cosmos-fifa-bolao-<suffix>` → **Settings → Networking → Private access** → **+ Create
+1. Cosmos `cosmos-prd-bl-cin-001` → **Settings → Networking → Private access** → **+ Create
    a private endpoint**.
-2. **Name:** `pe-cosmos-fifa-bolao` · **Region:** Central India.
-3. **Resource:** a conta `cosmos-fifa-bolao-<suffix>` · **Target sub-resource:** **`Sql`**.
-4. **Virtual network:** `vnet-fifa-bolao` · **Subnet:** **`snet-private-endpoints`**.
+2. **Name:** `pe-cosmos-prd-bl-cin-001` · **Region:** Central India.
+3. **Resource:** a conta `cosmos-prd-bl-cin-001` · **Target sub-resource:** **`Sql`**.
+4. **Virtual network:** `vnet-prd-bl-cin-001` · **Subnet:** **`snet-private-endpoints`**.
 5. **Private DNS integration: Yes** → zona **`privatelink.documents.azure.com`** (o Portal cria a
    zona + o vnet link + os A-records automaticamente).
 6. **Review + create** → **Create**.
 
 **(c) VNet Integration da API**
 
-1. Web App **API** (`app-fifa-bolao-<suffix>`) → **Settings → Networking → Virtual network
-   integration** → **Add** → **VNet:** `vnet-fifa-bolao` · **Subnet:** **`snet-appsvc-integration`**.
+1. Web App **API** (`app-prd-bl-bend-cin-001`) → **Settings → Networking → Virtual network
+   integration** → **Add** → **VNet:** `vnet-prd-bl-cin-001` · **Subnet:** **`snet-appsvc-integration`**.
 2. **Settings → Environment variables → App settings** → adicione `WEBSITE_VNET_ROUTE_ALL` = `1`
    → **Save** (a API reinicia).
 
@@ -948,10 +948,10 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
 > que partir **de dentro** (Kudu da API ou uma VM na VNet). O nome (`cosmos-...documents.azure.com`)
 > **não muda** — só *para onde* ele aponta, dependendo de quem pergunta.
 
-1. **Kudu da API:** `https://app-fifa-bolao-<suffix>.scm.azurewebsites.net` → **SSH** (console do
+1. **Kudu da API:** `https://app-prd-bl-bend-cin-001.scm.azurewebsites.net` → **SSH** (console do
    container Linux da API). Resolva o nome do Cosmos **de dentro** da VNet:
    ```bash
-   getent hosts cosmos-fifa-bolao-<suffix>.documents.azure.com
+   getent hosts cosmos-prd-bl-cin-001.documents.azure.com
    ```
    → deve mostrar um **IP privado (`10.20.2.x`)**. **IP público** = falta
    `WEBSITE_VNET_ROUTE_ALL=1` ou a zona DNS não linkada à VNet.
@@ -959,8 +959,8 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
    > Linux** — o console SSH é um shell do container, **sem** `nameresolver` (isso é ferramenta do
    > Kudu de **Windows**) e geralmente sem `nslookup`/`dig`. O `getent hosts` usa o resolvedor do
    > próprio sistema (glibc) e está sempre disponível. Alternativa garantida (a API é Node):
-   > `node -e "require('dns').lookup('cosmos-fifa-bolao-<suffix>.documents.azure.com',(e,a)=>console.log(a))"`.
-2. **App + banco:** abra `https://app-fifa-bolao-<suffix>.azurewebsites.net/api/health/full` →
+   > `node -e "require('dns').lookup('cosmos-prd-bl-cin-001.documents.azure.com',(e,a)=>console.log(a))"`.
+2. **App + banco:** abra `https://app-prd-bl-bend-cin-001.azurewebsites.net/api/health/full` →
    continua **`"ok":true`** (a API fala com o Cosmos pelo **IP privado**). _Este é o teste que
    realmente importa: se a API responde `ok` com a rede privada ligada, o caminho funciona._
 3. **Smoke do app:** refaça o **teste de pontuação** (10.2) — lançar um resultado ainda atualiza
@@ -987,9 +987,9 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
 | **Frontend/Backend mostra "Application Error" (página azul)** | O Node **crashou no boot** | Abra o **Log stream** (Web App → **Monitoring → Log stream**). Verifique: `JWT_SECRET` ≥ 32 chars, `COSMOS_*` corretos (Fase 7.2), Startup Command (`node backend/dist/server.js` na API / `node server.js` no front), `PORT=8080`. ⚠️ **Não use FTP** (desabilitado) — use o Log stream |
 | **Referência do Key Vault não resolve** (erro na App Setting) | RBAC faltando para a Managed Identity | Confirme **Key Vault Secrets User** para a MSI da API (e das Functions) no IAM do Key Vault (Fase 7.1) |
 | **Site carrega, mas chama a API errada / 404 em `/api`** | Variable `VITE_API_BASE_URL` ausente/errada (sem ela o build usa `/api`, que só funciona com Front Door) | Defina a Variable `VITE_API_BASE_URL` com a **URL absoluta** da sua API + `/api` (Fase 8.2) e **rode o workflow de novo** |
-| **Deploy publica no recurso errado / "resource not found"** | Variables de nome não batem com os recursos do Portal | Confira `API_APP_NAME`/`FRONTEND_APP_NAME`/`FUNCTION_APP_NAME`/`COSMOS_ACCOUNT_NAME`/`KEY_VAULT_NAME` (ou o `NAME_SUFFIX`) — o nome na Variable tem que ser **idêntico** ao do Portal (Seção 5) |
-| **(Fase 11.1) CORS no navegador** (erro no console F12, mas `curl` funciona) | `CORS_ORIGINS` ≠ URL do front (quase sempre **barra `/` no fim**) | Ajuste para `https://app-fifa-bolao-web-<suffix>.azurewebsites.net` **sem `/`**, ou volte para `*` e confira |
-| **Lancei resultado e o placar não muda** | Falta um container `leases-*`; ou a Function não conecta no Cosmos; ou a Function (Consumo) **hibernou** | Confira os **5 leases** (Fase 3.3); **reinicie** a `func-fifa-bolao-<suffix>`. Em Consumo (Y1) as Functions hibernam e o Change Feed às vezes só volta após **restart** |
+| **Deploy publica no recurso errado / "resource not found"** | Variables de nome não batem com os recursos do Portal | Confira `API_APP_NAME`/`FRONTEND_APP_NAME`/`FUNCTION_APP_NAME`/`COSMOS_ACCOUNT_NAME`/`KEY_VAULT_NAME`/`AZURE_RG` — o nome na Variable tem que ser **idêntico** ao do Portal (Seção 5) |
+| **(Fase 11.1) CORS no navegador** (erro no console F12, mas `curl` funciona) | `CORS_ORIGINS` ≠ URL do front (quase sempre **barra `/` no fim**) | Ajuste para `https://app-prd-bl-fend-cin-001.azurewebsites.net` **sem `/`**, ou volte para `*` e confira |
+| **Lancei resultado e o placar não muda** | Falta um container `leases-*`; ou a Function não conecta no Cosmos; ou a Function (Consumo) **hibernou** | Confira os **5 leases** (Fase 3.3); **reinicie** a `func-prd-bl-cin-001`. Em Consumo (Y1) as Functions hibernam e o Change Feed às vezes só volta após **restart** |
 | **Deploy (Actions) — job `Smoke tests live` vermelho** | O smoke pressupõe a topologia de produção (**Front Door same-origin**) — você está em **split sem Front Door** | **Esperado.** Os jobs de **deploy** (API/Frontend/Functions) é que importam — se estão verdes, valide manualmente (Fase 10) |
 | **Workflow falha no login Azure** | `AZURE_CREDENTIALS` ausente ou ≠ JSON do Service Principal | Refaça 8.1/8.2; o secret deve ser o **JSON completo** (começa em `{ "clientId"...`) |
 | **Seed falha com 403 (Forbidden)** | Cosmos em "Selected networks" sem o seu IP | Mantenha o Cosmos em **All networks** (Fase 3.1); o Cloud Shell precisa de acesso público |
@@ -1010,18 +1010,18 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
 
 | Onde | Nome | Origem / Exemplo |
 |---|---|---|
-| 🔢 | *`<suffix>`* | o seu sufixo único (ex.: `joao2026`) — em **todos** os nomes |
-| 🌐 | *Cosmos URI* | `https://cosmos-fifa-bolao-<suffix>.documents.azure.com:443/` (Fase 3.4) |
+| 🔢 | *Taxonomia* | `<tipo>-prd-bl-<carga>-cin-001` (Seção 5) — bumpe `-001`→`-002` se um nome global colidir |
+| 🌐 | *Cosmos URI* | `https://cosmos-prd-bl-cin-001.documents.azure.com:443/` (Fase 3.4) |
 | 🔐 | *Cosmos PRIMARY KEY* | chave longa (Fase 3.4) → secret `cosmos-key` |
 | 🔐 | *Cosmos CONNECTION STRING* | `AccountEndpoint=...;AccountKey=...;` (a CI usa nas Functions) |
 | 🔐 | *jwt-secret* | `openssl rand -base64 32` (Fase 5.2) → secret `jwt-secret` |
 | 🔐 | *SignalR connection string* | Primary Connection String (Fase 4.2) → secret + GitHub secret |
 | 🔐 | *AZURE_CREDENTIALS* | JSON do Service Principal (Fase 8.1) → GitHub secret |
 | 🔐 | *Admin do bolão* | `SEED_ADMIN_EMAIL` / senha (Fase 9) |
-| 🌐 | *URL da API* | `https://app-fifa-bolao-<suffix>.azurewebsites.net` |
-| 🌐 | *URL do Frontend* | `https://app-fifa-bolao-web-<suffix>.azurewebsites.net` |
+| 🌐 | *URL da API* | `https://app-prd-bl-bend-cin-001.azurewebsites.net` |
+| 🌐 | *URL do Frontend* | `https://app-prd-bl-fend-cin-001.azurewebsites.net` |
 
-**Segredos no Key Vault** (`kv-bolao-<suffix>`): `cosmos-endpoint` · `cosmos-key` ·
+**Segredos no Key Vault** (`kv-prd-bl-cin-001`): `cosmos-endpoint` · `cosmos-key` ·
 `cosmos-database` · `jwt-secret` · `signalr-connection-string`.
 
 **App Settings da API** (Fase 7.2): `COSMOS_ENDPOINT` · `COSMOS_KEY` · `COSMOS_DATABASE` ·
@@ -1031,9 +1031,8 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
 Fase 11.2).
 
 **GitHub** (Fase 8): *Secrets* `AZURE_CREDENTIALS`, `SIGNALR_CONNECTION_STRING` · *Variables*
-`AZURE_RG`, `VITE_API_BASE_URL`, `PUBLIC_BASE_URL` **+** (jeito simples) `NAME_SUFFIX` **ou**
-(jeito flexível) `API_APP_NAME`, `FRONTEND_APP_NAME`, `FUNCTION_APP_NAME`, `COSMOS_ACCOUNT_NAME`,
-`KEY_VAULT_NAME`.
+`AZURE_RG`, `API_APP_NAME`, `FRONTEND_APP_NAME`, `FUNCTION_APP_NAME`, `COSMOS_ACCOUNT_NAME`,
+`KEY_VAULT_NAME`, `VITE_API_BASE_URL`, `PUBLIC_BASE_URL`.
 
 > 🔒 **Regra de ouro:** segredo **nunca** vai para o código nem para o repositório. Aqui eles
 > vivem no **Key Vault** e são lidos por **Managed Identity** — sem senha em texto nas configs.
@@ -1042,13 +1041,13 @@ Fase 11.2).
 
 ## 🧹 8. Encerramento (parar custos)
 
-Ao terminar os testes: Portal → **Resource groups** → `rg-fifa-bolao` → **Delete resource group**
+Ao terminar os testes: Portal → **Resource groups** → `rg-prd-bl-cin-001` → **Delete resource group**
 (digite o nome para confirmar). Isso remove **tudo** de uma vez — App Service, Cosmos, Functions,
 SignalR, Key Vault, VNet, Private Endpoint — e **zera** qualquer cobrança.
 
 > 💡 Diferente de uma VM, não há "o que desligar": você **apaga o Resource Group** e o custo vai
 > a zero. Lembre-se também de remover o **Service Principal** (Entra ID → App registrations →
-> `bolao-deploy-<suffix>`) se não for reusar.
+> `bolao-deploy-bl`) se não for reusar.
 
 ---
 
