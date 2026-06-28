@@ -625,9 +625,11 @@ Web App **API** (`app-fifa-bolao-<suffix>`) → **Settings → Environment varia
 > na Fase 11** — uma porta de cada vez.
 
 > 🚨 **`JWT_SECRET` precisa de ≥ 32 caracteres** e **`JWT_EXPIRES_IN` precisa de unidade**
-> (`7d`, `24h`, `60m`) — **nunca** um número puro como `7`. O backend **valida no boot**: se
-> `JWT_SECRET` for curto ou `COSMOS_*` faltar, ele **não sobe** (vira "Application Error" até o
-> deploy). Health check: `/api/health`.
+> (`7d`, `24h`, `60m`) — **nunca** um número puro como `7` (o token nasceria expirado e toda
+> rota autenticada daria 401). O backend **valida no boot**: se `JWT_SECRET` tiver menos de 32
+> chars, ou faltar `COSMOS_ENDPOINT`/`COSMOS_KEY`, ele **não sobe** (vira "Application Error" até
+> o deploy). _(`COSMOS_DATABASE`, `NODE_ENV` e `PORT` têm default no código, mas o guia pede para
+> defini-las mesmo assim — `PORT=8080` é o esperado no App Service.)_ Health check: `/api/health`.
 
 > ✅ **Pronto quando:** as duas Managed Identities têm **Key Vault Secrets User** e todas as
 > referências da API aparecem como **resolvidas**.
