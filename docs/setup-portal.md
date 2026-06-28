@@ -865,6 +865,17 @@ jogadores**, leaderboard inicializado.
 
 #### 10.2 Teste de pontuação ponta a ponta (o teste que importa)
 
+> 🗓️ **Todos os jogos aparecem "Palpite finalizado"?** O palpite trava no kickoff
+> (`now ≥ kickoff − 30min`). Se as datas da Copa **já passaram**, ninguém consegue palpitar. Para
+> **liberar os jogos para teste**, rode (no Cloud Shell 🧰, com as credenciais do Cosmos no
+> ambiente — mesmas da Fase 9):
+> ```bash
+> npx tsx scripts/lab-open-predictions.ts --apply
+> ```
+> Ele move os 72 jogos de grupo para o **futuro** (palpites reabrem). Reverter ao calendário
+> oficial: `npm run reset` + `npm run seed`. _(Para finalizar um jogo **antes** do kickoff e testar
+> a pontuação, use **Admin → Resultados → "Permitir finalizar"** no jogo.)_
+
 1. No site, faça **login com o admin** (Fase 9).
 2. Faça um **palpite** num jogo qualquer (ou crie um 2º usuário e palpite com ele).
 3. Vá em **Admin → Resultados** e **lance o placar** desse jogo (marque como finalizado).
