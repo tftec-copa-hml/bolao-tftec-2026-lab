@@ -105,7 +105,7 @@ Tudo dentro de **um Resource Group** (`rg-prd-bl-cin-001`), na região **Central
 | Serviço Azure | Para que serve no Bolão | Camada / Custo |
 |---|---|---|
 | 🟦 **App Service Plan (B1 Linux)** | Host compartilhado dos **2 Web Apps** (API + frontend) | B1 ~US$13/mês |
-| 🌐 **Web App — API** | Backend Express (Node 20) que fala com o Cosmos | incluso no plano |
+| 🌐 **Web App — API** | Backend Express (Node 24) que fala com o Cosmos | incluso no plano |
 | 🌐 **Web App — Frontend** | Site React (SPA) servido por um mini Express | incluso no plano |
 | 🟩 **Azure Cosmos DB** (NoSQL) | Usuários, palpites, jogos, ranking, auditoria | Free Tier (1000 RU/s, 25 GB) |
 | 🟪 **Azure Functions** (Consumption) | **Calculam os pontos** e o leaderboard (via Change Feed) | Y1 — 1M req/mês grátis |
@@ -140,7 +140,7 @@ O "mapa do estádio" — como as peças se encaixam quando tudo estiver no ar:
                 ▼                                          ▼
    ┌───────────────────────────┐   /api/* (HTTPS+CORS)  ┌───────────────────────────┐
    │  🌐 WEB APP — FRONTEND     │ ────────────────────▶ │  🌐 WEB APP — API          │
-   │  React (SPA) + Express     │                       │  Express 5 (Node 20)       │
+   │  React (SPA) + Express     │                       │  Express 5 (Node 24)       │
    │  app-prd-bl-fend-cin-001   │                       │  app-prd-bl-bend-cin-001   │
    └───────────────────────────┘                       └──────────────┬────────────┘
                                                           Cosmos SDK   │   SignalR SDK
@@ -524,7 +524,7 @@ No Key Vault → **Objects → Secrets → + Generate/Import** e crie **um por u
 
 1. Portal → **App Services** → **+ Create** → **Web App**.
 2. **Resource group:** `rg-prd-bl-cin-001` · **Name:** `app-prd-bl-bend-cin-001`
-3. **Publish:** **Code** · **Runtime stack:** **Node 20 LTS** · **OS:** **Linux** · **Region:** Central India.
+3. **Publish:** **Code** · **Runtime stack:** **Node 24 LTS** · **OS:** **Linux** · **Region:** Central India.
 4. **App Service Plan:** selecione o `asp-prd-bl-cin-001` (6.1) → **Review + create** → **Create**.
 
 **Após criar**, abra o `app-prd-bl-bend-cin-001`:
@@ -543,7 +543,7 @@ No Key Vault → **Objects → Secrets → + Generate/Import** e crie **um por u
 
 1. Portal → **App Services** → **+ Create** → **Web App**.
 2. **Resource group:** `rg-prd-bl-cin-001` · **Name:** `app-prd-bl-fend-cin-001`
-3. **Publish:** Code · **Runtime:** **Node 20 LTS** · **OS:** Linux · **Region:** Central India.
+3. **Publish:** Code · **Runtime:** **Node 24 LTS** · **OS:** Linux · **Region:** Central India.
 4. **App Service Plan:** o **mesmo** `asp-prd-bl-cin-001` → **Review + create** → **Create**.
 
 **Após criar**, abra o `app-prd-bl-fend-cin-001` → **Settings → Configuration → General settings:**
@@ -558,7 +558,10 @@ No Key Vault → **Objects → Secrets → + Generate/Import** e crie **um por u
 
 1. Portal → busca **Function App** → **+ Create** → hosting **Consumption (Serverless)**.
 2. **Resource group:** `rg-prd-bl-cin-001` · **Name:** `func-prd-bl-cin-001`
-3. **Runtime stack:** **Node.js** · **Version:** **20 LTS** · **Region:** Central India.
+3. **Runtime stack:** **Node.js** · **Version:** **24 LTS** · **Region:** Central India.
+   > ⚠️ Se **24 LTS não aparecer** na lista (o suporte do Azure Functions a uma versão Node nova
+   > às vezes chega depois do App Service), escolha a **LTS mais recente disponível** (ex.: 22) —
+   > o código roda igual. Mantenha a mesma versão no `WEBSITE_NODE_DEFAULT_VERSION` se ajustar.
 4. **Operating System:** **Windows** _(o plano Consumo Linux nem sempre está disponível na
    região; Windows + Node é o caminho mais estável para as Functions)._
 5. **Storage account:** selecione a `stprdbl001` (4.1).
@@ -617,7 +620,7 @@ Web App **API** (`app-prd-bl-bend-cin-001`) → **Settings → Environment varia
 | `JWT_EXPIRES_IN` | `7d` |
 | `NODE_ENV` | `production` |
 | `PORT` | `8080` |
-| `WEBSITE_NODE_DEFAULT_VERSION` | `~20` |
+| `WEBSITE_NODE_DEFAULT_VERSION` | `~24` |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | a Connection String do App Insights (2.3) |
 | `CORS_ORIGINS` | `*` ← **aberto de propósito** (fechamos na Fase 11) |
 

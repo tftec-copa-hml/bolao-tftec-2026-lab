@@ -82,7 +82,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'AzureWebJobsStorage',      value: storageConnectionString }
         { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'node' }
         { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
-        { name: 'WEBSITE_NODE_DEFAULT_VERSION', value: '~20' }
+        { name: 'WEBSITE_NODE_DEFAULT_VERSION', value: '~24' }
         { name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING', value: storageConnectionString }
         { name: 'WEBSITE_CONTENTSHARE',     value: toLower(name) }
         // Cosmos (acessado por SDK ou Cosmos binding)

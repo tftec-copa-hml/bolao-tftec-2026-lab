@@ -1,7 +1,7 @@
 // =========================================================================
 // App Service Plan + App Service (backend Express + frontend estático)
 // =========================================================================
-// B1 Linux Node 20 LTS. Always On habilitado pra evitar cold start.
+// B1 Linux Node 24 LTS. Always On habilitado pra evitar cold start.
 // O app é deployado como Node app — backend Express serve API e arquivos
 // estáticos do build do frontend (dist/).
 // =========================================================================
@@ -49,7 +49,7 @@ resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
 }
 
 // -------------------------------------------------------------------------
-// App Service (Linux Node 20)
+// App Service (Linux Node 24)
 // -------------------------------------------------------------------------
 
 resource app 'Microsoft.Web/sites@2023-12-01' = {
@@ -65,7 +65,7 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
     httpsOnly: true
     clientAffinityEnabled: false
     siteConfig: {
-      linuxFxVersion: 'NODE|20-lts'
+      linuxFxVersion: 'NODE|24-lts'
       alwaysOn: skuName != 'F1'  // F1 não suporta Always On
       http20Enabled: true
       minTlsVersion: '1.2'
@@ -87,7 +87,7 @@ resource app 'Microsoft.Web/sites@2023-12-01' = {
         // Runtime
         { name: 'NODE_ENV',                 value: 'production' }
         { name: 'PORT',                     value: '8080' }
-        { name: 'WEBSITE_NODE_DEFAULT_VERSION', value: '~20' }
+        { name: 'WEBSITE_NODE_DEFAULT_VERSION', value: '~24' }
         { name: 'SCM_DO_BUILD_DURING_DEPLOYMENT', value: 'true' }
         // Observability
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }

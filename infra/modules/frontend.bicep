@@ -27,7 +27,7 @@ resource frontend 'Microsoft.Web/sites@2023-12-01' = {
     httpsOnly: true
     clientAffinityEnabled: false
     siteConfig: {
-      linuxFxVersion: 'NODE|20-lts'
+      linuxFxVersion: 'NODE|24-lts'
       alwaysOn: skuName != 'F1'
       http20Enabled: true
       minTlsVersion: '1.2'
@@ -35,7 +35,7 @@ resource frontend 'Microsoft.Web/sites@2023-12-01' = {
       healthCheckPath: '/healthz'
       appCommandLine: 'node server.js'
       appSettings: [
-        { name: 'WEBSITE_NODE_DEFAULT_VERSION', value: '~20' }
+        { name: 'WEBSITE_NODE_DEFAULT_VERSION', value: '~24' }
         { name: 'SCM_DO_BUILD_DURING_DEPLOYMENT', value: 'true' }
         { name: 'NODE_ENV', value: 'production' }
         { name: 'PORT', value: '8080' }
