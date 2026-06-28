@@ -611,6 +611,12 @@ No Key Vault → **Objects → Secrets → + Generate/Import** e crie **um por u
 > Functions leem o `signalr-connection-string` (via referência) quando você **não** usa o
 > caminho do GitHub secret (Fase 8). Dar a role às duas evita surpresa.
 
+6. **(Opcional — página "Operação ao vivo" do admin)** Dê à Managed Identity da **API** a role
+   **Monitoring Reader** no App Insights: abra **`appi-prd-bl-cin-001` → Access control (IAM) →
+   + Add role assignment → Monitoring Reader → Managed identity → `app-prd-bl-bend-cin-001`**.
+   É o que permite a API consultar Errors/Active Users/Latency (par com o `APPINSIGHTS_RESOURCE_ID`
+   da Fase 7.2). Pule se não for usar essa página.
+
 #### 7.2 App Settings da API (segredos por referência + CORS aberto)
 
 Web App **API** (`app-prd-bl-bend-cin-001`) → **Settings → Environment variables → App settings**
@@ -631,7 +637,8 @@ Web App **API** (`app-prd-bl-bend-cin-001`) → **Settings → Environment varia
 | `NODE_ENV` | `production` |
 | `PORT` | `8080` |
 | `WEBSITE_NODE_DEFAULT_VERSION` | `~24` |
-| `APPLICATIONINSIGHTS_CONNECTION_STRING` | a Connection String do App Insights (2.3) |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | a Connection String do App Insights (2.3) — telemetria |
+| `APPINSIGHTS_RESOURCE_ID` | o **Resource ID** do App Insights `appi-prd-bl-cin-001` (formato `/subscriptions/.../providers/microsoft.insights/components/appi-prd-bl-cin-001`) — habilita a página **Operação ao vivo** do admin |
 | `CORS_ORIGINS` | `*` ← **aberto de propósito** (fechamos na Fase 11) |
 
 7. **Apply / Save** (o app reinicia).
@@ -652,6 +659,13 @@ Web App **API** (`app-prd-bl-bend-cin-001`) → **Settings → Environment varia
 > testa: com `*`, a API aceita chamadas de **qualquer origem** (o seu frontend, testes locais,
 > Postman…). Nada de erro de CORS no meio da subida. **Fechamos para a URL específica do front
 > na Fase 11** — uma porta de cada vez.
+
+> 📈 **Página "Operação ao vivo" do admin (opcional).** Os cards **Errors / Active Users /
+> Latency** vêm de *queries* ao Application Insights. Para funcionarem, além do
+> `APPINSIGHTS_RESOURCE_ID` acima, a **Managed Identity da API precisa da role "Monitoring
+> Reader"** no App Insights (Fase 7.1). Sem isso, a página mostra **"AppInsights não
+> configurado"** — o resto do app funciona normal (o "Active Match" continua). A 1ª consulta após
+> reiniciar é fria (~10-20s) e a telemetria leva alguns minutos para aparecer.
 
 > 🚨 **`JWT_SECRET` precisa de ≥ 32 caracteres** e **`JWT_EXPIRES_IN` precisa de unidade**
 > (`7d`, `24h`, `60m`) — **nunca** um número puro como `7` (o token nasceria expirado e toda
