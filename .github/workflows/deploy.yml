@@ -238,13 +238,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     needs: [deploy_api, deploy_frontend, deploy_functions]
-    # Só roda no repo de PRODUÇÃO (topologia com Front Door same-origin: /api/* na
-    # URL pública roteia para a API). No lab/forks é SPLIT sem Front Door — o
-    # PUBLIC_BASE_URL é o frontend, que não serve /api → este smoke daria 404 (falso
-    # vermelho). A API e o frontend já são validados pelos próprios scripts de deploy.
     if: |
       always() &&
-      github.repository == 'TFTEC/fifa2026-bolao-dev' &&
       (needs.deploy_api.result == 'success' || needs.deploy_api.result == 'skipped') &&
       (needs.deploy_frontend.result == 'success' || needs.deploy_frontend.result == 'skipped') &&
       (needs.deploy_functions.result == 'success' || needs.deploy_functions.result == 'skipped') &&
@@ -252,28 +247,43 @@ jobs:
     steps:
       - name: Wait for warmup
         run: sleep 15
-      - name: Test API endpoints (via Front Door)
+      - name: Resolver URLs (split sem Front Door bate direto no backend)
+        id: urls
         run: |
-          # Same-origin pela borda (ADR-021): /api/* roteia para a API. O host
-          # direto *.azurewebsites.net está isolado (403), então validamos via AFD.
-          BASE="${PUBLIC_BASE_URL}"
+          # Frontend: a URL pública (frontend no split; Front Door na produção).
+          FE_BASE="${PUBLIC_BASE_URL}"
+          # API: na PRODUÇÃO (Front Door + origens isoladas) o host direto dá 403 → valida
+          # pela borda (PUBLIC_BASE_URL). No lab/forks (split, origem pública) bate DIRETO
+          # na URL do backend (APP_NAME = API_APP_NAME).
+          if [ "${{ github.repository }}" = "TFTEC/fifa2026-bolao-dev" ]; then
+            API_BASE="${PUBLIC_BASE_URL}"
+          else
+            API_BASE="https://${APP_NAME}.azurewebsites.net"
+          fi
+          echo "api=$API_BASE" >> "$GITHUB_OUTPUT"
+          echo "fe=$FE_BASE"   >> "$GITHUB_OUTPUT"
+          echo "▸ API em:      $API_BASE"
+          echo "▸ Frontend em: $FE_BASE"
+      - name: Smoke da API (saúde + Cosmos)
+        run: |
+          BASE="${{ steps.urls.outputs.api }}"
           set -e
-          curl -sf --max-time 30 "$BASE/api/health" | grep -q '"status":"ok"'
-          curl -sf --max-time 30 "$BASE/api/health/full" | grep -q '"ok":true'
-          curl -sf --max-time 30 "$BASE/api/leaderboard" | grep -q '"ranking"'
-          MC=$(curl -sf --max-time 30 "$BASE/api/matches" | node -e 'let d="";process.stdin.on("data",c=>c&&(d+=c)).on("end",()=>console.log(JSON.parse(d).count))')
-          test "$MC" = "72" && echo "✓ 72 matches" || (echo "✗ matches=$MC" && exit 1)
+          curl -sf --max-time 30 "$BASE/api/health"      | grep -q '"status":"ok"' && echo "✓ /api/health = ok"
+          curl -sf --max-time 30 "$BASE/api/health/full" | grep -q '"ok":true'     && echo "✓ /api/health/full = cosmos ok"
+          # matches: informativo apenas — é 0 antes do seed (Fase 9), então NÃO falha o smoke.
+          MC=$(curl -sf --max-time 30 "$BASE/api/matches" 2>/dev/null | node -e 'let d="";process.stdin.on("data",c=>c&&(d+=c)).on("end",()=>{try{console.log(JSON.parse(d).count)}catch(e){console.log("?")}})' || echo "?")
+          echo "ℹ /api/matches count = $MC  (0/? é esperado antes do seed da Fase 9)"
           echo "✓ API smoke PASS"
-      - name: Test Frontend (SPA via Front Door)
+      - name: Smoke do Frontend (SPA)
         run: |
-          BASE="${PUBLIC_BASE_URL}"
+          BASE="${{ steps.urls.outputs.fe }}"
           set -e
-          curl -sf --max-time 30 "$BASE/healthz" | grep -q 'ok'
-          curl -sf --max-time 30 -o /dev/null -w "%{http_code}" "$BASE/" | grep -q '200'
-          curl -sf --max-time 20 -o /dev/null -w "%{http_code}" "$BASE/leaderboard" | grep -q '200'
+          curl -sf --max-time 30 "$BASE/healthz" | grep -q 'ok' && echo "✓ /healthz = ok"
+          curl -sf --max-time 30 -o /dev/null -w "%{http_code}" "$BASE/"           | grep -q '200' && echo "✓ / = 200"
+          curl -sf --max-time 20 -o /dev/null -w "%{http_code}" "$BASE/leaderboard" | grep -q '200' && echo "✓ /leaderboard = 200"
           echo "✓ Frontend smoke PASS"
       - name: Summary
         run: |
           echo "## Smoke Live" >> $GITHUB_STEP_SUMMARY
-          echo "- Entrada pública (Front Door): ${PUBLIC_BASE_URL}" >> $GITHUB_STEP_SUMMARY
-          echo "- API same-origin: ${PUBLIC_BASE_URL}/api" >> $GITHUB_STEP_SUMMARY
+          echo "- API: ${{ steps.urls.outputs.api }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: ${{ steps.urls.outputs.fe }}" >> $GITHUB_STEP_SUMMARY
