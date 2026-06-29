@@ -973,11 +973,20 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
 
 1. Web App **API** (`app-prd-bl-bend-cin-001`) → **Settings → Networking → Virtual network
    integration** → **Add** → **VNet:** `vnet-prd-bl-cin-001` · **Subnet:** **`snet-appsvc-integration`**.
-2. **Settings → Environment variables → App settings** → adicione `WEBSITE_VNET_ROUTE_ALL` = `1`
-   → **Save** (a API reinicia).
+2. **Settings → Environment variables → App settings** → adicione **dois** e **Save** (a API reinicia):
+   - `WEBSITE_VNET_ROUTE_ALL` = `1` (todo egress da API pela VNet)
+   - `WEBSITE_DNS_SERVER` = `168.63.129.16` (DNS do Azure → resolve a zona privada para o IP
+     interno; sem ele a API pode continuar resolvendo o Cosmos pelo IP público)
 
 > 💡 **Só a API** recebe VNet Integration. O **frontend** não precisa (só fala com a API por
 > HTTPS) e as **Functions** não suportam (Consumption).
+>
+> 🧠 **Validação na prática (validado ao vivo):** o teste que **importa** e é fácil de checar é o
+> **`/api/health/full` continuar `cosmos.ok:true`** depois de ligar a VNet (a latência sobe um
+> pouco — sinal do salto privado). O `getent` de dentro do container é a prova "de dentro", mas o
+> **SSH/Kudu costuma estar com basic-auth desabilitado** (hardening) — se não conseguir acessar,
+> confie no `/api/health/full` + nos **A-records** da zona (`cosmos-… → 10.20.2.x`) + conexão do PE
+> **Approved**. _(Confirmado: PE Approved, A-record `cosmos-… → 10.20.2.4`, `/api/health/full` ok.)_
 
 **🧪 Teste (obrigatório — valide de DENTRO da rede):**
 
