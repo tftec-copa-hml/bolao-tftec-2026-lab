@@ -885,17 +885,30 @@ Web App **API** (`app-prd-bl-bend-cin-001`) → **Settings → Environment varia
 
 #### 8.2 Criar a permissão de deploy (Service Principal) 🧰
 
-No **Azure Cloud Shell** (Bash), descubra sua subscription e crie o Service Principal **com
+No **Azure Cloud Shell** (Bash), **escolha a assinatura certa** e crie o Service Principal **com
 escopo só no seu Resource Group** (boa prática):
 
 ```bash
-SUB_ID=$(az account show --query id -o tsv)
+# 1) Liste suas assinaturas e copie o "SubscriptionId" da que você está usando no lab
+az account list --query "[].{Nome:name, SubscriptionId:id, Padrao:isDefault}" -o table
+
+# 2) Cole AQUI o SubscriptionId da assinatura correta:
+SUB_ID="<cole-seu-subscription-id-aqui>"
+
+# 3) (recomendado) deixe essa assinatura como a ativa
+az account set --subscription "$SUB_ID"
+
+# 4) Crie o Service Principal com escopo só no seu Resource Group
 az ad sp create-for-rbac \
   --name "bolao-deploy-bl" \
   --role Contributor \
   --scopes /subscriptions/$SUB_ID/resourceGroups/rg-prd-bl-cin-001 \
   --json-auth
 ```
+
+> ⚠️ **Tem mais de uma assinatura?** Não confie na "padrão" — copie o `SubscriptionId` exato da
+> assinatura onde você criou o `rg-prd-bl-cin-001` (passo 1) e cole no passo 2. Se errar a
+> assinatura, o `--scopes` aponta para um Resource Group que não existe lá e o deploy falha depois.
 
 📋 **Copie TODO o JSON** retornado (começa em `{ "clientId": ...`). É o valor do secret
 `AZURE_CREDENTIALS` no GitHub.
