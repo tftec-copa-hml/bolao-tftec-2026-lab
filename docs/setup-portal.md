@@ -910,12 +910,56 @@ az ad sp create-for-rbac \
 > assinatura onde você criou o `rg-prd-bl-cin-001` (passo 1) e cole no passo 2. Se errar a
 > assinatura, o `--scopes` aponta para um Resource Group que não existe lá e o deploy falha depois.
 
-📋 **Copie TODO o JSON** retornado (começa em `{ "clientId": ...`). É o valor do secret
-`AZURE_CREDENTIALS` no GitHub.
+##### 📋 Como copiar o resultado (LEIA com atenção — é onde mais se erra)
+
+O comando imprime um **bloco JSON** parecido com este (os valores serão os SEUS):
+
+```json
+{
+  "clientId": "11111111-1111-1111-1111-111111111111",
+  "clientSecret": "aBc~Exemplo.SuaSenha.Secreta.Aqui",
+  "subscriptionId": "22222222-2222-2222-2222-222222222222",
+  "tenantId": "33333333-3333-3333-3333-333333333333",
+  "activeDirectoryEndpointUrl": "https://login.microsoftonline.com",
+  "resourceManagerEndpointUrl": "https://management.azure.com/",
+  "activeDirectoryGraphResourceId": "https://graph.windows.net/",
+  "sqlManagementEndpointUrl": "https://management.core.windows.net:8443/",
+  "galleryEndpointUrl": "https://gallery.azure.com/",
+  "managementEndpointUrl": "https://management.core.windows.net/"
+}
+```
+
+**Copie do primeiro `{` até o último `}`, INCLUSIVE — exatamente como apareceu. Não mude nada.**
+
+✅ **O que TEM que ir junto** (faz parte do JSON):
+- a **chave de abertura `{`** (primeiro caractere) e a **chave de fechamento `}`** (último caractere);
+- **todas as aspas duplas `"`**, os **dois-pontos `:`** e as **vírgulas `,`**;
+- **todas as linhas** (são ~10 linhas) — não copie só a `clientId`/`clientSecret`.
+
+❌ **O que NÃO copiar:**
+- **avisos** que possam aparecer **antes** do JSON (ex.: linhas começando com `WARNING:` ou
+  `The output includes credentials...`) — comece a seleção **no `{`**;
+- o **`$`** ou o **prompt** do Cloud Shell, nem espaços/linhas em branco depois do `}` final;
+- **não** "embrulhe" em aspas, **não** tire as chaves, **não** transforme numa linha só.
+
+> 💡 **Confira rápido:** o que você copiou deve **começar com `{`** e **terminar com `}`**. Se
+> começar com `WARNING` ou com `"clientId"` (sem o `{`), você copiou errado — refaça a seleção.
+>
+> 🧰 **Truque à prova de erro (opcional):** gere e copie sem risco de selecionar de menos/demais —
+> rode `az ad sp create-for-rbac ... --json-auth > sp.json` e depois `cat sp.json`; ou no Cloud
+> Shell use **Upload/Download** para baixar o `sp.json`. O conteúdo do arquivo já é o JSON puro.
+
+Esse JSON inteiro é o valor do secret **`AZURE_CREDENTIALS`** no GitHub (passo 8.3). No GitHub,
+cole tudo dentro do campo **Value** (uma caixa de texto grande — o JSON com várias linhas cabe
+inteiro ali; não precisa virar uma linha só).
 
 > 💡 **O que é isso?** Uma "conta de robô" que o GitHub Actions usa para logar no Azure e
 > publicar. O `--scopes` limita o poder dela **só** ao `rg-prd-bl-cin-001`. Em CLIs antigas, troque
 > `--json-auth` por `--sdk-auth`.
+
+> 🔒 **É um segredo de verdade** (contém o `clientSecret`). Cole **só** no campo de **secret** do
+> GitHub — nunca num arquivo do repositório, num chat ou print. Se ele vazar, **gere outro**
+> (rode o comando de novo) e atualize o secret.
 
 #### 8.3 Configurar Secrets e Variables no seu fork
 
