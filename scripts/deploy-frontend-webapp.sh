@@ -100,6 +100,15 @@ log "Aguardando startup (~90s)..."
 sleep 90
 ok "Warmup completo"
 
+# Readiness gate: cold start de app recém-criado pode passar de 90s.
+# Espera /healthz = 200 (até +4 min) antes do smoke, p/ evitar falso-negativo.
+log "Aguardando /healthz = 200 (cold start)..."
+for i in $(seq 1 16); do
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$SMOKE_URL/healthz" 2>/dev/null || echo 000)
+  [ "$code" = "200" ] && { ok "Frontend respondendo (tentativa $i)"; break; }
+  sleep 15
+done
+
 # 6. Smoke: health-probe + SPA + fallback de rota
 log "[6/6] Smoke tests live"
 pass=0; fail=0

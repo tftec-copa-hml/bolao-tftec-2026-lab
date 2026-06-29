@@ -115,6 +115,16 @@ log "Aguardando startup probe (~2 min — Run-From-Package monta zip)..."
 sleep 120
 ok "Warmup completo"
 
+# Readiness gate: cold start de um plano/app recém-criado pode passar de 2 min.
+# Espera /api/health responder 200 (até +5 min) ANTES do smoke, p/ não dar
+# falso-negativo (que, na API, ainda pularia o deploy das Functions).
+log "Aguardando /api/health = 200 (cold start)..."
+for i in $(seq 1 20); do
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$SMOKE_URL/api/health" 2>/dev/null || echo 000)
+  [ "$code" = "200" ] && { ok "API respondendo (tentativa $i)"; break; }
+  sleep 15
+done
+
 # -----------------------------------------------------------------------------
 # 7. Smoke tests live
 # -----------------------------------------------------------------------------
