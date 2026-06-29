@@ -585,7 +585,28 @@ Na conta Cosmos → **Settings → Keys**. 📋 Anote (vai usar nos segredos do 
 5. **Networking:** Public _(a API resolve por Managed Identity; restringir é hardening futuro)._
 6. **Review + create** → **Create**.
 
-#### 5.2 Gerar o `jwt-secret`
+#### 5.2 Dar a você mesmo permissão de gravar segredos (RBAC)
+
+> 🔴 **Passo obrigatório — sem ele a 5.4 falha.** Com o cofre em **RBAC**, **criar o Key Vault
+> NÃO te dá acesso aos segredos**. Se você for direto para o "+ Generate/Import", recebe
+> **403 Forbidden** (*"The user ... does not have secrets set permission on key vault ..."*).
+> Você precisa **se atribuir** uma role de escrita de segredos.
+
+1. Key Vault `kv-prd-bl-cin-001` → **Access control (IAM)** → **+ Add → Add role assignment**.
+2. **Role:** **Key Vault Secrets Officer** (cria/lê/edita/remove **segredos** — o suficiente aqui).
+   _(Alternativa mais ampla: **Key Vault Administrator**, que também gerencia chaves/certificados.)_
+3. **Next** → **Assign access to:** *User, group, or service principal* → **+ Select members** →
+   escolha **a sua própria conta** (a que está logada no Portal) → **Select**.
+4. **Review + assign**.
+
+> ⏳ A permissão leva **1–2 min para propagar**. Se a 5.4 ainda der 403, aguarde um pouco e
+> **recarregue a página** do Key Vault.
+>
+> 💡 **Não confunda com a Fase 7.1:** lá você dá **Key Vault Secrets User** (somente leitura) às
+> **Managed Identities** dos apps, para **lerem** os segredos em runtime. **Aqui** é **você
+> (humano)** ganhando permissão de **criar** os segredos. Identidades e papéis diferentes.
+
+#### 5.3 Gerar o `jwt-secret`
 
 O `JWT_SECRET` assina os tokens de login e precisa de **≥ 32 caracteres aleatórios**. Gere um
 no **Azure Cloud Shell** 🧰 (ícone `>_` no topo do Portal, ou https://shell.azure.com — já vem
@@ -597,7 +618,7 @@ openssl rand -base64 32
 
 📋 Copie o resultado (uma string longa). É o valor do segredo `jwt-secret` abaixo.
 
-#### 5.3 Criar os secrets
+#### 5.4 Criar os secrets
 
 No Key Vault → **Objects → Secrets → + Generate/Import** e crie **um por um** (Upload options:
 **Manual**):
@@ -607,7 +628,7 @@ No Key Vault → **Objects → Secrets → + Generate/Import** e crie **um por u
 | `cosmos-endpoint` | a **URI** do Cosmos (3.4) |
 | `cosmos-key` | a **PRIMARY KEY** do Cosmos (3.4) |
 | `cosmos-database` | `bolao2026` |
-| `jwt-secret` | a string gerada em 5.2 (≥ 32 chars) |
+| `jwt-secret` | a string gerada em 5.3 (≥ 32 chars) |
 | `signalr-connection-string` | a **Primary Connection String** do SignalR (4.2) |
 
 > 🔒 **Regra de ouro:** o Key Vault é a **única fonte de verdade** dos segredos. Para rotacionar
@@ -1186,7 +1207,7 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
 | 🌐 | *Cosmos URI* | `https://cosmos-prd-bl-cin-001.documents.azure.com:443/` (Fase 3.4) |
 | 🔐 | *Cosmos PRIMARY KEY* | chave longa (Fase 3.4) → secret `cosmos-key` |
 | 🔐 | *Cosmos CONNECTION STRING* | `AccountEndpoint=...;AccountKey=...;` (a CI usa nas Functions) |
-| 🔐 | *jwt-secret* | `openssl rand -base64 32` (Fase 5.2) → secret `jwt-secret` |
+| 🔐 | *jwt-secret* | `openssl rand -base64 32` (Fase 5.3) → secret `jwt-secret` |
 | 🔐 | *SignalR connection string* | Primary Connection String (Fase 4.2) → secret + GitHub secret |
 | 🔐 | *AZURE_CREDENTIALS* | JSON do Service Principal (Fase 8.1) → GitHub secret |
 | 🔐 | *Admin do bolão* | `SEED_ADMIN_EMAIL` / senha (Fase 9) |
