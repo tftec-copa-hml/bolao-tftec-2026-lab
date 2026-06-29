@@ -481,6 +481,35 @@ fi
 > containers que já existem apenas retornam "conflito" (marcados `✗`, sem problema) e os demais
 > seguem. Mesmo usando o atalho, **confira os 14** no Data Explorer antes de seguir.
 
+##### ✅ Check rápido — a estrutura do Cosmos está completa?
+
+Antes de seguir, rode este bloco no **Cloud Shell** para validar **tudo de uma vez** (throughput
+do database + os 14 containers, apontando nominalmente qualquer um que falte):
+
+```bash
+RG=rg-prd-bl-cin-001
+ACC=cosmos-prd-bl-cin-001     # ajuste se você renomeou
+DB=bolao2026
+
+echo "== Throughput do database (esperado: 1000) =="
+az cosmosdb sql database throughput show -g "$RG" -a "$ACC" -n "$DB" --query "resource.throughput" -o tsv
+
+echo "== Containers existentes =="
+got=$(az cosmosdb sql container list -g "$RG" -a "$ACC" -d "$DB" --query "[].id" -o tsv | sort)
+echo "$got"
+echo "Total: $(printf '%s\n' "$got" | grep -c .)  (esperado: 14)"
+
+echo "== Algum faltando? =="
+for c in users predictions specials matches-cache leaderboard groups players config audit-log \
+         leases-calc leases-specials leases-aggregate-predictions leases-aggregate-specials leases-emit-leaderboard; do
+  printf '%s\n' "$got" | grep -qx "$c" || echo "❌ FALTA: $c"
+done
+echo "(se não apareceu nenhum '❌ FALTA' acima, os 14 estão completos ✅)"
+```
+
+> ✅ **Pronto quando:** throughput = **1000**, total = **14** e **nenhum** `❌ FALTA`. Aí a camada
+> de dados está correta e você pode seguir para a 3.4.
+
 > 🛠️ **Troubleshooting — erro `... would have increased the total throughput to 1200 RU/s`:**
 > sinal de que o database foi criado **sem throughput compartilhado** (o "Provision throughput"
 > da 3.2 não pegou), então cada container tenta provisionar RU/s próprio e a 3ª criação estoura o
