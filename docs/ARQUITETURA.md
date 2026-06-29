@@ -2,7 +2,7 @@
 
 Este documento descreve **todos os recursos** da aplicação, o **papel de cada um**
 e os **fluxos de dados** entre eles. É a referência para entender a estrutura antes
-de fazer o deploy (ver o passo a passo em [`DEPLOY-ALUNO-PORTAL.md`](./DEPLOY-ALUNO-PORTAL.md)).
+de fazer o deploy (ver o passo a passo em [`setup-portal.md`](./setup-portal.md)).
 
 ---
 

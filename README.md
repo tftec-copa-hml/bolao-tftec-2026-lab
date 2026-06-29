@@ -75,19 +75,18 @@ bash scripts/deploy.sh
 
 Documentação detalhada em [`docs/`](./docs).
 
-📘 **Para deploy do código no Azure, sempre use [`docs/deploy-runbook.md`](./docs/deploy-runbook.md).**
-Procedimento validado, 5-8 min, 7 smoke tests automáticos.
-
 ---
 
 ## 📚 Documentação
 
-### Guias de reprodução (3 caminhos)
-| Caminho | Quando usar |
-|---|---|
-| 📘 [`docs/setup-bicep.md`](docs/setup-bicep.md) | **Oficial.** IaC reproduzível e idempotente |
-| ⚙️ [`docs/setup-cli.md`](docs/setup-cli.md) | Aprender Azure CLI imperativo |
-| 🖼️ [`docs/setup-portal.md`](docs/setup-portal.md) | Visual, primeira vez no Azure |
+### 🎓 Guia do aluno — comece aqui
+**Para subir o lab do zero no Azure, siga [`docs/setup-portal.md`](docs/setup-portal.md).**
+Guia passo a passo **validado ponta a ponta**: taxonomia de nomes, **Node 24** (Web Apps) /
+**Node 22** (Functions), Key Vault + Managed Identity, deploy via **GitHub Actions**, seed,
+palpites e pontuação — e como **fechar a rede** no fim.
+
+> ℹ️ `docs/setup-bicep.md` e `docs/setup-cli.md` são caminhos alternativos (IaC / CLI) e **ainda
+> não foram atualizados** para a taxonomia/versões deste lab — prefira o `setup-portal.md`.
 
 ### Referência
 | Doc | Conteúdo |

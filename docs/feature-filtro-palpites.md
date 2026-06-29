@@ -3,7 +3,7 @@
 # Spec — Filtro "Jogos que não palpitei" + rename/reorder dos chips (Tela de Palpites)
 
 > Bolão TFTEC 2026 · SPA React (Vite, TS, react-query, tailwind, shadcn) · **só frontend, 1 deploy** · PT-BR
-> Arquivos âncora: `frontend/src/pages/Palpites.tsx`, `frontend/src/components/bolao/MatchCard.tsx`, `frontend/src/components/bolao/LockedBadge.tsx`, `frontend/src/lib/types-domain.ts`, `docs/backlog-palpites.md` §4.
+> Arquivos âncora: `frontend/src/pages/Palpites.tsx`, `frontend/src/components/bolao/MatchCard.tsx`, `frontend/src/components/bolao/LockedBadge.tsx`, `frontend/src/lib/types-domain.ts`, (spec interno) §4.
 
 ## Contexto
 
