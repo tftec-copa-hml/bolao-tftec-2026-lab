@@ -390,13 +390,6 @@ az cosmosdb sql database throughput show \
 > ✅ **Pronto quando** o segundo comando imprime **`1000`** — o database `bolao2026` existe com
 > throughput **compartilhado**, e os 14 containers da 3.3 vão dividir esses 1000 RU/s sem cobrar
 > throughput próprio.
->
-> ♻️ **Se já tinha criado o database errado** (pelo Portal, sem throughput): apague e recrie —
-> ele ainda está vazio nesta fase (o seed é só na Fase 9):
-> ```bash
-> az cosmosdb sql database delete -g rg-prd-bl-cin-001 -a cosmos-prd-bl-cin-001 -n bolao2026 --yes
-> az cosmosdb sql database create -g rg-prd-bl-cin-001 -a cosmos-prd-bl-cin-001 -n bolao2026 --throughput 1000
-> ```
 
 #### 3.3 Criar os 14 containers
 
