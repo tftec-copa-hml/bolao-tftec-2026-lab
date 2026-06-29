@@ -780,6 +780,11 @@ instância para `-002`, reflita aqui):
 3. Acompanhe os jobs em paralelo: **Deploy API**, **Deploy Frontend**, **Deploy Functions** e,
    por fim, **Smoke tests live**.
 
+> ⏳ **Acabou de criar o Service Principal (8.1)? A 1ª execução pode falhar no "Azure login"** com
+> **`No subscriptions found for ***`** — é só a **propagação do RBAC** (a role do SP leva ~1-2 min
+> para valer). **Espere 2 min e rode o workflow de novo** (Re-run / Run workflow). _(Validado: a
+> role existe; era só timing.)_
+
 > ✅ **O que esperar:** os **três** jobs de deploy (**API**, **Frontend**, **Functions**) ficam
 > **verdes**. O job final **`Smoke tests live`** valida pela **topologia de produção (Front
 > Door same-origin)**, então **no seu ambiente split ele pode ficar vermelho** — **isso é
@@ -1045,7 +1050,7 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
 | **Login / chamadas falham com "Failed to fetch"** (a API responde direto na URL dela, mas não pelo site) | Bloqueio **cross-origin**: falta `API_ORIGIN` no front (CSP `connect-src`) e/ou o CORP do backend | Confirme a app setting **`API_ORIGIN`** no front = URL da API (Fase 6.3) e recarregue; o repo já traz **CORS** + **CORP `cross-origin`** (`backend/src/server.ts`). Cheque os headers: a API deve mandar `Access-Control-Allow-Origin` e `Cross-Origin-Resource-Policy: cross-origin` |
 | **Lancei resultado e o placar não muda** | **(nº1)** Function App em **Node 24** → worker não indexa (lista de functions **vazia**); ou falta um `leases-*`; ou a Function não conecta no Cosmos; ou (Consumo) **hibernou** | **Confirme a lista de functions** (`az functionapp function list ...` deve ter **6**). Se vazia → **`WEBSITE_NODE_DEFAULT_VERSION=~22`** + restart (Node 24 não roda no Functions). Confira os **5 leases** (3.3) e o binding `AzureWebJobsCosmosDBConnection`; em Consumo, o Change Feed às vezes só volta após **restart** |
 | **Deploy (Actions) — job `Smoke tests live` vermelho** | O smoke pressupõe a topologia de produção (**Front Door same-origin**) — você está em **split sem Front Door** | **Esperado.** Os jobs de **deploy** (API/Frontend/Functions) é que importam — se estão verdes, valide manualmente (Fase 10) |
-| **Workflow falha no login Azure** | `AZURE_CREDENTIALS` ausente ou ≠ JSON do Service Principal | Refaça 8.1/8.2; o secret deve ser o **JSON completo** (começa em `{ "clientId"...`) |
+| **Workflow falha no login Azure** (`No subscriptions found for ***`) | **Propagação do RBAC** do SP recém-criado (mais comum), ou `AZURE_CREDENTIALS` ausente/≠ JSON do SP | Espere **1-2 min** e **rode o workflow de novo** (a role do SP leva um tempo para valer). Se persistir: refaça 8.1/8.2; o secret deve ser o **JSON completo** (começa em `{ "clientId"...`) |
 | **Seed falha com 403 (Forbidden)** | Cosmos em "Selected networks" sem o seu IP | Mantenha o Cosmos em **All networks** (Fase 3.1); o Cloud Shell precisa de acesso público |
 | **(Fase 11.2)** `getent hosts` na API devolve **IP público** | Falta `WEBSITE_VNET_ROUTE_ALL=1`, ou a zona `privatelink.documents.azure.com` não linkada à VNet | Confirme a VNet Integration + `WEBSITE_VNET_ROUTE_ALL=1` e a zona DNS linkada (11.2) |
 | **(Fase 11.2)** `nameresolver: command not found` no SSH da API | `nameresolver` é do Kudu de **Windows**; a API é **Linux** | Use `getent hosts <fqdn>` ou `node -e "require('dns').lookup('<fqdn>',(e,a)=>console.log(a))"` (11.2) |
@@ -1102,6 +1107,12 @@ SignalR, Key Vault, VNet, Private Endpoint — e **zera** qualquer cobrança.
 > 💡 Diferente de uma VM, não há "o que desligar": você **apaga o Resource Group** e o custo vai
 > a zero. Lembre-se também de remover o **Service Principal** (Entra ID → App registrations →
 > `bolao-deploy-bl`) se não for reusar.
+
+> ♻️ **Vai RECRIAR com os mesmos nomes depois de apagar?** O **Key Vault tem soft-delete** — o
+> nome `kv-prd-bl-cin-001` fica "preso" ~90 dias e a recriação falha por nome em uso. Antes de
+> recriar, **purgue** o cofre: `az keyvault purge -n kv-prd-bl-cin-001 --location centralindia`
+> (ou liste com `az keyvault list-deleted`). _Aluno de primeira vez não passa por isso; é só para
+> quem re-executa o lab._
 
 ---
 
