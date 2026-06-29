@@ -700,7 +700,12 @@ No Key Vault → **Objects → Secrets → + Generate/Import** e crie **um por u
 
 #### 6.4 Function App (pontuação)
 
-1. Portal → busca **Function App** → **+ Create** → hosting **Consumption (Serverless)**.
+1. Portal → busca **Function App** → **+ Create** → em **Hosting plan** escolha
+   **Consumption (Windows)** _(o plano serverless pay-as-you-go)_.
+   > ⚠️ **NÃO** escolha **Flex Consumption**, Functions Premium, App Service nem Container Apps.
+   > O lab foi validado no **Consumption (Windows)** (Node 22 + `WEBSITE_NODE_DEFAULT_VERSION=~22`);
+   > o **Flex Consumption** é um modelo novo (storage de deploy + versão do Node diferentes) e pode
+   > quebrar o scoring.
 2. **Resource group:** `rg-prd-bl-cin-001` · **Name:** `func-prd-bl-cin-001`
 3. **Runtime stack:** **Node.js** · **Version:** **22 LTS** · **Region:** Central India.
    > 🚨 **Use Node 22 na Function App (NÃO 24).** O **Azure Functions** (modelo v4 Node) **ainda
