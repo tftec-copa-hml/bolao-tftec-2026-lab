@@ -218,6 +218,43 @@ Conte essa história — é o melhor jeito de amarrar tudo:
 > é por isso que escolhemos Cosmos. Tire o Change Feed e essa cadeia inteira precisaria de filas e
 > jobs manuais.
 
+### Diagrama do fluxo (Change Feed encadeado)
+
+> 💡 O GitHub renderiza o diagrama abaixo automaticamente. Cada **seta tracejada `-.->` é um Change
+> Feed** (o banco avisando que algo mudou); as caixas `⚙️` são Functions; os cilindros são
+> containers do Cosmos.
+
+```mermaid
+flowchart TD
+    Admin([👤 Admin lança o placar de um jogo]) -->|grava| MC[(matches-cache)]
+    MC -. Change Feed .-> CP[⚙️ calc-predictions<br/>25 / 15 / 0 por palpite]
+    CP -->|grava pontos| PR[(predictions)]
+    PR -. Change Feed .-> AP[⚙️ aggregate-from-predictions<br/>soma o total do usuário]
+    AP -->|atualiza| LB[(leaderboard)]
+    LB -. Change Feed .-> EM[⚙️ emit-leaderboard-update]
+    EM -->|publish| SR{{📡 SignalR}}
+    SR ==>|push WebSocket| BR([🌐 Navegadores — a tabela reordena AO VIVO])
+
+    AdminF([👤 Admin lança o resultado FINAL da Copa]) -->|grava| CFG[(config)]
+    CFG -. Change Feed .-> CS[⚙️ calc-specials<br/>campeão / artilheiro / top 4]
+    CS -->|grava pontos| SP[(specials)]
+    SP -. Change Feed .-> AS[⚙️ aggregate-from-specials]
+    AS -->|atualiza| LB
+
+    classDef fn fill:#e8d5ff,stroke:#7b2ff7,color:#000;
+    classDef db fill:#d5f5e3,stroke:#1e8449,color:#000;
+    classDef rt fill:#ffe5cc,stroke:#e67e22,color:#000;
+    class CP,AP,EM,CS,AS fn;
+    class MC,PR,LB,CFG,SP db;
+    class SR rt;
+```
+
+> 🧠 **Leitura do diagrama em voz alta (para a turma):** "O admin grava o placar → o banco **avisa**
+> → a função calcula os pontos → grava → o banco **avisa de novo** → outra função soma no ranking →
+> grava → **avisa** → a função de tempo real publica no SignalR → o navegador recebe e reordena.
+> Ninguém apertou nada." O ramo de baixo é a mesma ideia para os **palpites especiais**, calculados
+> só no fim da Copa.
+
 ---
 
 ## 10. Simplificações do lab (vs. produção) — e por quê
@@ -266,3 +303,58 @@ Conte essa história — é o melhor jeito de amarrar tudo:
 
 > Regras de pontuação detalhadas (tabelas, exemplos, balanceamento): ver
 > [`scoring-rules.md`](./scoring-rules.md).
+
+---
+
+## 13. Glossário (para explicar termo a termo)
+
+Definições curtas, com **analogia** quando ajuda — pensadas para você usar com a turma.
+
+### Modelos de nuvem e execução
+| Termo | O que é | Analogia / nota |
+|---|---|---|
+| **IaaS** | Infra como serviço: você aluga a **VM** e gerencia SO, web server, patches | "Alugar o carro e dirigir você mesmo" |
+| **PaaS** | Plataforma como serviço: você sobe **só o código**; o Azure cuida de SO/HTTPS/escala | **App Service** é PaaS — "táxi: você só diz o destino" |
+| **SaaS** | Software pronto, você só usa (ex.: Office 365) | "Uber Pool — nem o carro é seu" |
+| **Serverless** | Você não provisiona servidor; a plataforma roda seu código **sob demanda** e cobra pelo uso | **Functions Consumption**. Não é "sem servidor" — é "sem **gerenciar** servidor" |
+| **Consumption (plano)** | Plano serverless das Functions: escala a partir do zero, paga só quando executa | Ideal p/ carga em picos (sai resultado → roda; resto = ~zero) |
+| **Cold start** | Atraso da 1ª requisição quando o app estava "dormindo" (sem instância quente) | Por isso usamos B1 + Always On na API; e o readiness gate no deploy |
+
+### Cosmos DB
+| Termo | O que é | Analogia / nota |
+|---|---|---|
+| **NoSQL (documento)** | Banco que guarda **documentos JSON**, sem schema fixo | "Pastas com fichas livres" em vez de planilha rígida |
+| **Change Feed** | Fluxo **ordenado** das mudanças de um container; Functions se inscrevem nele | O **coração** do app — "o banco avisa quando algo muda" |
+| **RU/s (Request Units por segundo)** | Unidade de **throughput** (custo) do Cosmos; cada operação consome RUs | "Créditos por segundo". O lab usa **1000 RU/s compartilhados** (Free Tier) |
+| **Throughput compartilhado** | Os 1000 RU/s ficam no **database** e os containers dividem | Evita pagar RU/s por container; por isso o database é criado com throughput |
+| **Partition key** | Campo que **distribui** os documentos em partições (ex.: `predictions` por `/userId`) | Espalha a carga p/ não "esquentar" uma partição |
+| **Lease container** | Container que guarda **até onde** cada Function já leu o Change Feed | "Marca-página". São os **5 leases** — sem eles, o scoring não dispara |
+| **Upsert** | "Update or insert": grava sem duplicar (cria se não existe, atualiza se existe) | Por isso o **seed é idempotente** |
+| **Idempotente** | Rodar de novo dá o mesmo resultado, sem efeito duplicado | Vale p/ seed e para reprocessar Change Feed com segurança |
+
+### Identidade, segredos e rede
+| Termo | O que é | Analogia / nota |
+|---|---|---|
+| **Managed Identity (MSI)** | Uma **identidade** do próprio recurso Azure, **sem senha**, que recebe permissões | "O crachá do app" — ninguém digita senha |
+| **RBAC** | Controle de acesso por **papéis** (ex.: *Key Vault Secrets User*) atribuídos a identidades | Quem pode o quê, sem compartilhar senha |
+| **Key Vault reference** | App Setting que guarda só um **ponteiro** `@Microsoft.KeyVault(...)` p/ o segredo | O valor real fica no cofre; o app busca via MSI |
+| **Service Principal (SP)** | "Conta de robô" que o GitHub Actions usa para logar no Azure e publicar | Escopo limitado ao **Resource Group** do aluno |
+| **CORS** | Regra do navegador que libera (ou bloqueia) uma origem chamar outra | No split (lab), a API precisa **liberar a origem do front** |
+| **Front Door / WAF** | Borda global da Microsoft (roteamento same-origin) + firewall de aplicação | **Só na produção**; o lab é split sem Front Door |
+| **Private Endpoint** | IP **privado** para um recurso (ex.: Cosmos) dentro de uma VNet | Fechado na **Fase 11**; Functions Consumption não integram, por isso o Cosmos fica público |
+
+### App, real-time e testes
+| Termo | O que é | Analogia / nota |
+|---|---|---|
+| **SPA (Single Page App)** | Front React que roda no navegador; troca de tela sem recarregar a página | Servido por um mini-Express no App Service |
+| **WebSocket** | Conexão **bidirecional** e persistente navegador↔servidor (vs. request/response) | É o que o SignalR usa p/ **empurrar** o ranking |
+| **SignalR (Serverless mode)** | Serviço gerenciado de WebSocket; aqui **as Functions** publicam as mensagens | Tira do app a dor de gerenciar conexões |
+| **JWT** | "Crachá" de login assinado que o navegador manda em cada chamada à API | Assinado com o `JWT_SECRET` (≥ 32 chars, no Key Vault) |
+| **Health endpoint** | Rota que diz se o app está vivo (`/api/health`) e se o Cosmos responde (`/api/health/full`) | Usado pelo readiness gate e pelo smoke test |
+| **Smoke test** | Bateria **rápida** de checagens "está tudo de pé?" após o deploy | O `validate-lab.ps1` / o bloco PowerShell da Fase 10.1 |
+| **Readiness gate** | Espera o app responder **200** antes de prosseguir/validar | Evita falso-negativo em cold start no deploy |
+| **Cota regional (trial)** | Limite de compute **por região** na conta trial; vem zerada na maioria | Por isso o guia manda **descobrir a região com cota** antes de tudo |
+
+> 🧠 **Dica de didática:** ao apresentar, percorra o **diagrama da §9** nomeando cada termo do
+> glossário no momento em que ele aparece no fluxo — assim o aluno aprende o conceito **vendo-o
+> funcionar**, não como lista solta.
