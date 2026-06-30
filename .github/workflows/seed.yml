@@ -1,0 +1,77 @@
+name: Seed (carga inicial)
+
+# Carga inicial do banco (admin + 72 jogos + 12 grupos/48 seleções + ~1247 players +
+# leaderboard) SEM git clone e SEM terminal. Acione manualmente:
+#   Actions → "Seed (carga inicial)" → Run workflow → preencha o admin → Run.
+#
+# Como pega as credenciais do Cosmos: usa o MESMO Service Principal do deploy
+# (secret AZURE_CREDENTIALS, com role Contributor no RG) para ler o endpoint e a
+# chave DIRETO da conta Cosmos via ARM (az cosmosdb ...). Não precisa de acesso ao
+# Key Vault nem de novos secrets.
+
+on:
+  workflow_dispatch:
+    inputs:
+      admin_email:
+        description: 'E-mail do admin do bolão (login do painel)'
+        required: true
+        default: 'admin@bolao.tftec.com.br'
+      admin_password:
+        description: 'Senha do admin (TROQUE — mín. 8 caracteres)'
+        required: true
+        default: 'TFTEC@2026!'
+      admin_name:
+        description: 'Nome do admin'
+        required: true
+        default: 'Admin TFTEC'
+
+concurrency:
+  group: seed-main
+  cancel-in-progress: false
+
+env:
+  RG: ${{ vars.AZURE_RG || 'rg-fifa-bolao' }}
+  COSMOS_ACCOUNT: ${{ vars.COSMOS_ACCOUNT_NAME || format('cosmos-fifa-bolao-{0}', vars.NAME_SUFFIX) }}
+
+jobs:
+  seed:
+    name: Seed do Cosmos
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - name: Azure login (Service Principal)
+        uses: azure/login@v3
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Install dependencies
+        run: npm install
+      - name: Rodar o seed
+        run: |
+          echo "::add-mask::${{ inputs.admin_password }}"
+          set -euo pipefail
+          # Endpoint + chave do SEU Cosmos via ARM (o SP tem Contributor no RG).
+          COSMOS_ENDPOINT=$(az cosmosdb show -n "$COSMOS_ACCOUNT" -g "$RG" --query documentEndpoint -o tsv)
+          COSMOS_KEY=$(az cosmosdb keys list -n "$COSMOS_ACCOUNT" -g "$RG" --query primaryMasterKey -o tsv)
+          echo "::add-mask::$COSMOS_KEY"
+          export COSMOS_ENDPOINT COSMOS_KEY
+          export COSMOS_DATABASE="bolao2026"
+          export SEED_ADMIN_EMAIL="${{ inputs.admin_email }}"
+          export SEED_ADMIN_PASSWORD="${{ inputs.admin_password }}"
+          export SEED_ADMIN_NAME="${{ inputs.admin_name }}"
+          echo "▸ Cosmos: $COSMOS_ENDPOINT (db bolao2026) — rodando o seed..."
+          npm run seed
+      - name: Summary
+        run: |
+          {
+            echo "## 🌱 Seed concluído"
+            echo "- Admin: \`${{ inputs.admin_email }}\`"
+            echo "- Esperado: **72 jogos**, **12 grupos / 48 seleções**, **~1247 players**, leaderboard inicializado"
+            echo "- Idempotente: pode rodar de novo sem duplicar."
+          } >> "$GITHUB_STEP_SUMMARY"

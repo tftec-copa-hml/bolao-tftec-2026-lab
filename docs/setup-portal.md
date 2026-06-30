@@ -244,7 +244,7 @@ Os recursos seguem o padrão de taxonomia **`<tipo>-<ambiente>-<carga>-<região>
 | **6** | Hospedagem: **Plan** + **Web App API** + **Web App Frontend** + **Function App** | 15 min |
 | **7** | Amarração: **Managed Identity + Key Vault references** (CORS `*` aberto) | 12 min |
 | **8** | Esteira de deploy: **Service Principal** + **GitHub Actions** 🧰 | 15 min |
-| **9** | Carga inicial: **seed** (Azure Cloud Shell) 🧰 | 8 min |
+| **9** | Carga inicial: **seed** (workflow no GitHub — sem terminal) | 3 min |
 | **10** | Final: **validar ponta a ponta** (app 100%, ambiente aberto) | 10 min |
 | **11** | 🔒 **Fechar o ambiente por partes** (CORS → rede privada), testando a cada passo | 40 min |
 | **12** | Troubleshooting | livre |
@@ -522,14 +522,15 @@ echo "(se não apareceu nenhum '❌ FALTA' acima, os 14 estão completos ✅)"
 
 #### 3.4 Anotar as credenciais
 
-Na conta Cosmos → **Settings → Keys**. 📋 Anote (vai usar nos segredos do Key Vault e no seed):
+Na conta Cosmos → **Settings → Keys**. 📋 Anote (vai usar nos segredos do Key Vault na Fase 5):
 
 - **URI** — ex.: `https://cosmos-prd-bl-cin-001.documents.azure.com:443/`
 - **PRIMARY KEY** (chave longa)
 - **PRIMARY CONNECTION STRING** (formato `AccountEndpoint=...;AccountKey=...;`)
 
-> ⚠️ Essas credenciais são **segredos**. Você vai colá-las no **Key Vault** (Fase 5) e no
-> **Cloud Shell** do seed (Fase 9) — **nunca** no código nem no GitHub.
+> ⚠️ Essas credenciais são **segredos**. Você vai colá-las no **Key Vault** (Fase 5) — **nunca** no
+> código nem no GitHub. _(O **seed** (Fase 9) não precisa que você cole a chave: ele a lê sozinho
+> da conta Cosmos via o Service Principal.)_
 
 > ✅ **Pronto quando:** o Data Explorer mostra **14 containers** dentro de `bolao2026` e você
 > anotou URI + PRIMARY KEY + PRIMARY CONNECTION STRING.
@@ -1077,42 +1078,32 @@ instância para `-002`, reflita aqui):
 > grupos (48 seleções)**, o **catálogo de jogadores** (~1247) e a entrada inicial do leaderboard.
 > _(Os jogos de mata-mata são lançados depois, pelo admin.)_
 
-O seed é um script Node que fala com o **seu** Cosmos. Como o Cosmos ainda está em **rede
-pública** (Fase 3), rodamos pelo **Azure Cloud Shell** 🧰 — sem instalar nada local.
+O seed roda como um **workflow no seu fork** — **sem `git clone`, sem terminal**. Ele usa o
+**mesmo Service Principal do deploy** (secret `AZURE_CREDENTIALS`, com role Contributor) para ler
+o endpoint e a chave do **seu** Cosmos direto da conta (via ARM) e popular o banco.
 
-No **Azure Cloud Shell** (Bash):
+> ⚠️ **Pré-requisito:** o Cosmos precisa estar em **rede pública** (Fase 3.1) — o runner do GitHub
+> grava no Cosmos pela internet. Nesta fase ele está público; só restringimos na **Fase 11**. Por
+> isso o seed vem **antes** da Fase 11. _(Se precisar re-seedar depois, reabra o público temporariamente.)_
 
-```bash
-# 1) baixe o SEU fork (troque <seu-usuario>)
-git clone https://github.com/<seu-usuario>/bolao-tftec-2026-lab.git bolao
-cd bolao
-npm install
+1. No **seu fork** → aba **Actions** → no menu à esquerda, **"Seed (carga inicial)"** → botão **Run workflow**.
+2. Preencha os campos:
+   - **admin_email** — o e-mail com que você vai **logar no painel admin**.
+   - **admin_password** — **troque** o padrão por uma senha sua (mín. 8 caracteres).
+   - **admin_name** — seu nome.
+3. Clique em **Run workflow** (verde) → aguarde **~2–3 min**.
 
-# 2) aponte para o SEU Cosmos (cole os valores da Fase 3.4)
-export COSMOS_ENDPOINT="https://cosmos-prd-bl-cin-001.documents.azure.com:443/"
-export COSMOS_KEY="<sua PRIMARY KEY>"
-export COSMOS_DATABASE="bolao2026"
+O resumo do workflow deve mostrar: **1 admin** criado, **72 jogos**, **12 grupos / 48 seleções**,
+**~1247 jogadores**, leaderboard inicializado.
 
-# 3) defina o SEU admin (troque pelos seus dados)
-export SEED_ADMIN_EMAIL="voce@exemplo.com"
-export SEED_ADMIN_PASSWORD="SuaSenhaForte!"
-export SEED_ADMIN_NAME="Seu Nome"
-
-# 4) rode o seed
-npm run seed
-```
-
-Deve terminar com: **1 admin** criado, **72 jogos**, **12 grupos / 48 seleções**, **~1247
-jogadores**, leaderboard inicializado.
-
-> 💡 **Idempotente.** Pode rodar de novo sem duplicar (faz upsert; o admin não é recriado se já
-> existir o e-mail). Se você **não** definir `SEED_ADMIN_*`, ele cria um admin padrão
-> (`admin@bolao.tftec.com.br`) — **prefira definir o seu** e anote a senha.
+> 💡 **Idempotente.** Pode rodar de novo sem duplicar (faz upsert; o admin não é recriado se o
+> e-mail já existir).
 
 > ⚠️ **Guarde o e-mail/senha do admin** — é com ele que você entra no painel para lançar
-> resultados (Fase 10).
+> resultados (Fase 10). A senha fica **mascarada** nos logs do workflow.
 
-> ✅ **Pronto quando:** o seed terminou sem erro (72 jogos, 12 grupos, ~1247 players, admin).
+> ✅ **Pronto quando:** o workflow **"Seed (carga inicial)"** terminou **verde** (resumo com 72
+> jogos, 12 grupos, ~1247 players, admin criado).
 
 ---
 
@@ -1140,9 +1131,13 @@ jogadores**, leaderboard inicializado.
 
 > 🗓️ **Todos os jogos aparecem "Palpite finalizado"?** O palpite trava no kickoff
 > (`now ≥ kickoff − 30min`). Se as datas da Copa **já passaram**, ninguém consegue palpitar. Para
-> **liberar os jogos para teste**, rode (no Cloud Shell 🧰, com as credenciais do Cosmos no
-> ambiente — mesmas da Fase 9):
+> **liberar os jogos para teste**, rode este helper no **Cloud Shell** 🧰 (é um script de teste,
+> então aqui ainda usamos terminal). Pegue as credenciais do **seu** Cosmos e clone o fork:
 > ```bash
+> git clone https://github.com/<seu-usuario>/bolao-tftec-2026-lab.git bolao && cd bolao && npm install
+> export COSMOS_ENDPOINT=$(az cosmosdb show -n <conta-cosmos> -g <seu-rg> --query documentEndpoint -o tsv)
+> export COSMOS_KEY=$(az cosmosdb keys list -n <conta-cosmos> -g <seu-rg> --query primaryMasterKey -o tsv)
+> export COSMOS_DATABASE=bolao2026
 > npx tsx scripts/lab-open-predictions.ts --apply            # ~1 mês à frente (default)
 > npx tsx scripts/lab-open-predictions.ts --apply --days 45  # ajuste a janela
 > ```
@@ -1319,7 +1314,8 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
 | **Lancei resultado e o placar não muda** | **(nº1)** Function App em **Node 24** → worker não indexa (lista de functions **vazia**); ou falta um `leases-*`; ou a Function não conecta no Cosmos; ou (Consumo) **hibernou** | **Confirme a lista de functions** (`az functionapp function list ...` deve ter **6**). Se vazia → **`WEBSITE_NODE_DEFAULT_VERSION=~22`** + restart (Node 24 não roda no Functions). Confira os **5 leases** (3.3) e o binding `AzureWebJobsCosmosDBConnection`; em Consumo, o Change Feed às vezes só volta após **restart** |
 | **Deploy (Actions) — job `Smoke tests live` vermelho** | O smoke pressupõe a topologia de produção (**Front Door same-origin**) — você está em **split sem Front Door** | **Esperado.** Os jobs de **deploy** (API/Frontend/Functions) é que importam — se estão verdes, valide manualmente (Fase 10) |
 | **Workflow falha no login Azure** (`No subscriptions found for ***`) | **Propagação do RBAC** do SP recém-criado (mais comum), ou `AZURE_CREDENTIALS` ausente/≠ JSON do SP | Espere **1-2 min** e **rode o workflow de novo** (a role do SP leva um tempo para valer). Se persistir: refaça 8.2/8.3; o secret deve ser o **JSON completo** (começa em `{ "clientId"...`) |
-| **Seed falha com 403 (Forbidden)** | Cosmos em "Selected networks" sem o seu IP | Mantenha o Cosmos em **All networks** (Fase 3.1); o Cloud Shell precisa de acesso público |
+| **Seed (workflow) falha — Cosmos inacessível / Forbidden** | Cosmos em "Selected networks" (ex.: já fez a Fase 11) | O runner do GitHub grava no Cosmos pela internet → mantenha o Cosmos em **All networks** (Fase 3.1) ao rodar o seed; restrinja só na Fase 11 |
+| **Seed (workflow) falha no Azure login** | `AZURE_CREDENTIALS` ausente/inválido no fork | Refaça o secret (Fase 8.2) — o mesmo SP do deploy é usado pelo seed |
 | **(Fase 11.2)** `getent hosts` na API devolve **IP público** | Falta `WEBSITE_VNET_ROUTE_ALL=1`, ou a zona `privatelink.documents.azure.com` não linkada à VNet | Confirme a VNet Integration + `WEBSITE_VNET_ROUTE_ALL=1` e a zona DNS linkada (11.2) |
 | **(Fase 11.2)** `nameresolver: command not found` no SSH da API | `nameresolver` é do Kudu de **Windows**; a API é **Linux** | Use `getent hosts <fqdn>` ou `node -e "require('dns').lookup('<fqdn>',(e,a)=>console.log(a))"` (11.2) |
 | **(Fase 11.2)** `/api/health/full` quebrou após o Private Endpoint | Private Endpoint não **Approved**, ou DNS sem A-records | Cosmos → Networking → connection **Approved**; recrie os A-records pela aba **DNS configuration** do PE; em último caso reabra (remova `WEBSITE_VNET_ROUTE_ALL`) e reteste |
