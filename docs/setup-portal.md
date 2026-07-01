@@ -1292,12 +1292,17 @@ Saída esperada:
 >   (**mesma assinatura** do bolão → dá para importar direto, sem exportar `.pfx`).
 
 Onde aparecer `<sua-zona>`, troque pela sua (ex.: `copaazure26.online`). O hostname do bolão será
-**`bola.<sua-zona>`** (ex.: `bola.copaazure26.online`).
+**`bolao.<sua-zona>`** (ex.: `bolao.copaazure26.online`).
 
-#### 10.5.1 — Importar o certificado wildcard no frontend
+#### 10.5.1 — Apontar o frontend para o cert wildcard (referência ao Key Vault)
+
+> 💡 Você **não faz upload** do `.pfx` no frontend — você **aponta/referencia** o certificado que já
+> está no seu **Key Vault de tickets**. O App Service usa o cert **de lá** (e renova sozinho quando o
+> cert for renovado no cofre).
 
 1. Portal → frontend **`app-prd-bl-fend-cin-001`** → **Settings → Certificates** → aba **Bring your
-   own certificates** → **+ Add certificate** → **Import from Key Vault**.
+   own certificates** → **+ Add certificate** → **Import from Key Vault** _(esta opção **referencia**
+   o cofre — não copia o cert)_.
 2. **Subscription:** a sua · **Key Vault:** **`kv-prd-tk-cin-001`** · **Certificate:** o **wildcard**
    (`*.<sua-zona>`) → **Add**.
 
@@ -1310,34 +1315,34 @@ Onde aparecer `<sua-zona>`, troque pela sua (ex.: `copaazure26.online`). O hostn
 #### 10.5.2 — Apontar o DNS (na sua zona) e adicionar o domínio
 
 1. Frontend → **Settings → Custom domains** → **+ Add custom domain**.
-2. **Domain:** **`bola.<sua-zona>`** → o Portal mostra **os registros de validação** (guarde o
+2. **Domain:** **`bolao.<sua-zona>`** → o Portal mostra **os registros de validação** (guarde o
    **Custom Domain Verification ID**).
 3. Na **sua zona DNS** (Portal → sua zona `<sua-zona>` → **+ Record set**), crie **os dois**:
 
    | Tipo | Nome | Valor |
    |---|---|---|
-   | **CNAME** | `bola` | `app-prd-bl-fend-cin-001.azurewebsites.net` |
-   | **TXT** | `asuid.bola` | o **Custom Domain Verification ID** que o Portal exibiu |
+   | **CNAME** | `bolao` | `app-prd-bl-fend-cin-001.azurewebsites.net` |
+   | **TXT** | `asuid.bolao` | o **Custom Domain Verification ID** que o Portal exibiu |
 
 4. Volte ao App Service → **Validate** → **Add**. _(Falhou a validação? Aguarde 1–2 min pela
    propagação do DNS e tente de novo.)_
 
 #### 10.5.3 — Vincular o certificado (ligar o HTTPS)
 
-1. Ainda em **Custom domains**, na linha do `bola.<sua-zona>` → **Add binding** (ícone de cadeado).
+1. Ainda em **Custom domains**, na linha do `bolao.<sua-zona>` → **Add binding** (ícone de cadeado).
 2. **TLS/SSL type:** **SNI SSL** · **Certificate:** o **wildcard** importado na 10.5.1 → **Add**.
 3. **HTTPS Only** já está ligado (Fase 6.3). Teste no navegador:
-   **`https://bola.<sua-zona>`** → o site carrega com **cadeado válido**. ✅
+   **`https://bolao.<sua-zona>`** → o site carrega com **cadeado válido**. ✅
 
 #### 10.5.4 — Anotar para o fechamento (Fase 11)
 
-- Agora o frontend responde em **duas** URLs: a `.azurewebsites.net` **e** a `bola.<sua-zona>`.
+- Agora o frontend responde em **duas** URLs: a `.azurewebsites.net` **e** a `bolao.<sua-zona>`.
 - Enquanto o **CORS está `*`**, tudo funciona. Mas na **Fase 11** (fechar o CORS), a origem permitida
-  na API (`CORS_ORIGINS`) deve ser **`https://bola.<sua-zona>`** (o domínio custom), **não** a
+  na API (`CORS_ORIGINS`) deve ser **`https://bolao.<sua-zona>`** (o domínio custom), **não** a
   `.azurewebsites.net`. O mesmo vale para o **`API_ORIGIN`** do front (CSP) se você fechar o CSP.
 - A **`VITE_API_BASE_URL`** (URL da **API**) **não muda** — o domínio custom é só do frontend.
 
-> ✅ **Pronto quando:** `https://bola.<sua-zona>` abre o site com **cadeado válido**.
+> ✅ **Pronto quando:** `https://bolao.<sua-zona>` abre o site com **cadeado válido**.
 
 ---
 
@@ -1360,7 +1365,7 @@ A porta mais barata de fechar primeiro: parar de aceitar **qualquer** origem.
    - de `*`
    - para `https://app-prd-bl-fend-cin-001.azurewebsites.net` **(sem barra `/` no fim)**
    - 🌐 **Fez a Fase 10.5 (domínio custom)?** Então use o **domínio próprio** como origem:
-     `https://bola.<sua-zona>` (é a URL pela qual o usuário acessa o site). Se usar os dois (custom +
+     `https://bolao.<sua-zona>` (é a URL pela qual o usuário acessa o site). Se usar os dois (custom +
      azurewebsites), separe por vírgula.
 2. **Apply / Save** (a API reinicia).
 
