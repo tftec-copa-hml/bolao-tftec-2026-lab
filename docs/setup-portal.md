@@ -222,7 +222,7 @@ Os recursos seguem o padrão de taxonomia **`<tipo>-<ambiente>-<carga>-<região>
 | Application Insights | `appi-prd-bl-cin-001` | observabilidade |
 | SignalR Service | `signalr-prd-bl-cin-001` | tempo real |
 | App Service Plan | `asp-prd-bl-cin-001` | B1 Linux; hospeda os 2 Web Apps |
-| _(Fase 11)_ Virtual Network | `vnet-prd-bl-cin-001` | `10.20.0.0/16` |
+| _(Fase 11)_ VNet + subnets | `vnet-prd-inf-cin-001` (**já existe** — do lab de infra: subnets `snet-prd-inf-pe-cin-001` e `snet-prd-inf-appsvc-cin-001`) | rede privada — **reusada**, não criada |
 | _(Fase 11)_ Private Endpoint | `pe-cosmos-prd-bl-cin-001` | IP privado do Cosmos |
 
 > 📌 **Anote os nomes finais.** **Nomes globais** (`cosmos-`, `kv-`, `app-`, `func-`, storage)
@@ -1397,19 +1397,26 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
 > público** (as Functions continuam por ele). Fechar o público 100% exigiria subir as Functions
 > para **Elastic Premium** — fica como evolução (Seção 9).
 
-**(a) Criar a VNet + 2 subnets**
+**(a) Usar a VNet e subnets já existentes (do lab inicial de infra)**
 
-1. Portal → **Virtual networks** → **+ Create**.
-2. **Resource group:** `rg-prd-bl-cin-001` · **Name:** `vnet-prd-bl-cin-001` · **Region:** **Central
-   India** (a **mesma** dos apps — obrigatório).
-3. Aba **IP Addresses:** address space **`10.20.0.0/16`**. Crie **2 subnets**:
+Você **não cria** VNet nem subnets aqui — o **lab inicial (etapa de infra)** já criou. Vamos
+**reusar** estas:
 
-| Subnet | Range | Configuração especial |
+| Recurso | Nome | Uso nesta fase |
 |---|---|---|
-| `snet-appsvc-integration` | `10.20.1.0/27` | **Delegation:** `Microsoft.Web/serverFarms` |
-| `snet-private-endpoints` | `10.20.2.0/27` | **Network policies for private endpoints: Disabled** |
+| **VNet** | `vnet-prd-inf-cin-001` | a rede onde tudo se conecta |
+| **Subnet — Private Endpoint** | `snet-prd-inf-pe-cin-001` | recebe o **IP privado** do Cosmos (passo b) |
+| **Subnet — VNet Integration** | `snet-prd-inf-appsvc-cin-001` | por onde a **API** sai para a VNet (passo c) |
 
-4. **Review + create** → **Create**.
+> ⚠️ **Confira 2 pré-requisitos** nessas subnets (o lab de infra já deve ter deixado prontos):
+> - a subnet de **VNet Integration** (`snet-prd-inf-appsvc-cin-001`) precisa estar **delegada** a
+>   **`Microsoft.Web/serverFarms`** — senão o App Service não integra;
+> - a subnet de **Private Endpoint** (`snet-prd-inf-pe-cin-001`) com **network policies for private
+>   endpoints = Disabled** (padrão em subnets criadas para PE).
+>
+> A VNet precisa estar na **mesma região** dos apps (**Central India**). _(Se por algum motivo você
+> não tiver essa VNet/subnets, crie uma VNet na região com 2 subnets: uma delegada a
+> `Microsoft.Web/serverFarms` e uma para PE.)_
 
 **(b) Private Endpoint do Cosmos (+ Private DNS)**
 
@@ -1417,7 +1424,7 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
    a private endpoint**.
 2. **Name:** `pe-cosmos-prd-bl-cin-001` · **Region:** Central India.
 3. **Resource:** a conta `cosmos-prd-bl-cin-001` · **Target sub-resource:** **`Sql`**.
-4. **Virtual network:** `vnet-prd-bl-cin-001` · **Subnet:** **`snet-private-endpoints`**.
+4. **Virtual network:** `vnet-prd-inf-cin-001` · **Subnet:** **`snet-prd-inf-pe-cin-001`**.
 5. **Private DNS integration: Yes** → zona **`privatelink.documents.azure.com`** (o Portal cria a
    zona + o vnet link + os A-records automaticamente).
 6. **Review + create** → **Create**.
@@ -1425,7 +1432,7 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
 **(c) VNet Integration da API**
 
 1. Web App **API** (`app-prd-bl-bend-cin-001`) → **Settings → Networking → Virtual network
-   integration** → **Add** → **VNet:** `vnet-prd-bl-cin-001` · **Subnet:** **`snet-appsvc-integration`**.
+   integration** → **Add** → **VNet:** `vnet-prd-inf-cin-001` · **Subnet:** **`snet-prd-inf-appsvc-cin-001`**.
 2. **Settings → Environment variables → App settings** → adicione **dois** e **Save** (a API reinicia):
    - `WEBSITE_VNET_ROUTE_ALL` = `1` (todo egress da API pela VNet)
    - `WEBSITE_DNS_SERVER` = `168.63.129.16` (DNS do Azure → resolve a zona privada para o IP
@@ -1438,8 +1445,8 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
 > **`/api/health/full` continuar `cosmos.ok:true`** depois de ligar a VNet (a latência sobe um
 > pouco — sinal do salto privado). O `getent` de dentro do container é a prova "de dentro", mas o
 > **SSH/Kudu costuma estar com basic-auth desabilitado** (hardening) — se não conseguir acessar,
-> confie no `/api/health/full` + nos **A-records** da zona (`cosmos-… → 10.20.2.x`) + conexão do PE
-> **Approved**. _(Confirmado: PE Approved, A-record `cosmos-… → 10.20.2.4`, `/api/health/full` ok.)_
+> confie no `/api/health/full` + nos **A-records** da zona (`cosmos-… → IP privado da subnet de PE`)
+> + a conexão do PE **Approved**.
 
 **🧪 Teste (obrigatório — valide de DENTRO da rede):**
 
@@ -1448,7 +1455,7 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
 >
 > 🧠 **Por que o MESMO nome resolve diferente dependendo de onde você pergunta?** A Private DNS
 > Zone (`privatelink.documents.azure.com`) só está **ligada à sua VNet**. Quem pergunta **de
-> dentro** da VNet (a sua API, via VNet Integration) recebe o **IP privado** (`10.20.x`); quem
+> dentro** da VNet (a sua API, via VNet Integration) recebe um **IP privado** (da subnet de PE); quem
 > pergunta **de fora** (o seu PC, a internet) continua recebendo o **IP público**. É o esperado —
 > chama-se "DNS split-horizon". Por isso testar do seu micro **não prova nada**: a validação tem
 > que partir **de dentro** (Kudu da API ou uma VM na VNet). O nome (`cosmos-...documents.azure.com`)
@@ -1459,7 +1466,7 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
    ```bash
    getent hosts cosmos-prd-bl-cin-001.documents.azure.com
    ```
-   → deve mostrar um **IP privado (`10.20.2.x`)**. **IP público** = falta
+   → deve mostrar um **IP privado** (da faixa da subnet `snet-prd-inf-pe-cin-001`). **IP público** = falta
    `WEBSITE_VNET_ROUTE_ALL=1` ou a zona DNS não linkada à VNet.
    > 🧠 **Por que `getent` e não `nameresolver`/`nslookup`?** A nossa API roda em **App Service
    > Linux** — o console SSH é um shell do container, **sem** `nameresolver` (isso é ferramenta do
@@ -1480,8 +1487,8 @@ Agora o tráfego **API↔Cosmos** sai da internet e passa a viver **dentro da re
 > DNS linkada e a connection **Approved** em Cosmos → Networking. Em último caso, **reabra**
 > temporariamente o caminho (remova `WEBSITE_VNET_ROUTE_ALL`) para confirmar que o resto está OK.
 
-> ✅ **Pronto quando:** o `getent` na API devolve **IP `10.20.x`** e `/api/health/full` segue
-> **`"ok":true`**. 🔒 **CORS fechado + caminho API↔Cosmos privatizado — uma porta de cada vez.**
+> ✅ **Pronto quando:** o `getent` na API devolve um **IP privado** (não público) e `/api/health/full`
+> segue **`"ok":true`**. 🔒 **CORS fechado + caminho API↔Cosmos privatizado — uma porta de cada vez.**
 
 ---
 
