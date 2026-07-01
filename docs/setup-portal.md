@@ -45,6 +45,7 @@
    - [⚙️ Fase 8 — Esteira de deploy: Service Principal + GitHub Actions](#️-fase-8--esteira-de-deploy-service-principal--github-actions)
    - [🌱 Fase 9 — Carga inicial: o seed](#-fase-9--carga-inicial-o-seed)
    - [🏆 Fase 10 — Final: validar ponta a ponta (app 100% aberto)](#-fase-10--final-validar-ponta-a-ponta-app-100-aberto)
+   - [🌐 Fase 10.5 — Domínio válido + Certificado (HTTPS no frontend)](#-fase-105--domínio-válido--certificado-https-no-frontend)
    - [🔒 Fase 11 — Fechar o ambiente por partes (uma porta de cada vez)](#-fase-11--fechar-o-ambiente-por-partes-uma-porta-de-cada-vez)
    - [🎖️ Fase 12 — Troubleshooting](#️-fase-12--troubleshooting)
 7. [Tabela de variáveis e segredos](#-7-tabela-de-variáveis-e-segredos)
@@ -246,6 +247,7 @@ Os recursos seguem o padrão de taxonomia **`<tipo>-<ambiente>-<carga>-<região>
 | **8** | Esteira de deploy: **Service Principal** + **GitHub Actions** 🧰 | 15 min |
 | **9** | Carga inicial: **seed** (workflow no GitHub — sem terminal) | 3 min |
 | **10** | Final: **validar ponta a ponta** (app 100%, ambiente aberto) | 10 min |
+| **10.5** | 🌐 **Domínio válido + Certificado** (HTTPS no frontend, cert wildcard do KV de tickets) | 15 min |
 | **11** | 🔒 **Fechar o ambiente por partes** (CORS → rede privada), testando a cada passo | 40 min |
 | **12** | Troubleshooting | livre |
 
@@ -1277,6 +1279,68 @@ Saída esperada:
 
 ---
 
+### 🌐 Fase 10.5 — Domínio válido + Certificado (HTTPS no frontend)
+
+> 🎯 **Objetivo:** publicar o **frontend** num **domínio próprio** com **HTTPS válido** (cadeado),
+> usando a **sua zona DNS** e o **certificado wildcard** que você criou na etapa de **tickets**
+> (guardado no seu `kv-prd-tk-cin-001`). **Só o frontend** ganha domínio custom; a API segue na URL
+> `*.azurewebsites.net`.
+
+> 📋 **Pré-requisitos (vindos da etapa de tickets):**
+> - Sua **zona DNS pública** já criada (ex.: `copaazure26.online`) — **você controla** os registros.
+> - O **certificado wildcard** `*.<sua-zona>` já **no seu Key Vault de tickets** `kv-prd-tk-cin-001`
+>   (**mesma assinatura** do bolão → dá para importar direto, sem exportar `.pfx`).
+
+Onde aparecer `<sua-zona>`, troque pela sua (ex.: `copaazure26.online`). O hostname do bolão será
+**`bola.<sua-zona>`** (ex.: `bola.copaazure26.online`).
+
+#### 10.5.1 — Importar o certificado wildcard no frontend
+
+1. Portal → frontend **`app-prd-bl-fend-cin-001`** → **Settings → Certificates** → aba **Bring your
+   own certificates** → **+ Add certificate** → **Import from Key Vault**.
+2. **Subscription:** a sua · **Key Vault:** **`kv-prd-tk-cin-001`** · **Certificate:** o **wildcard**
+   (`*.<sua-zona>`) → **Add**.
+
+> ⚠️ **O cert não aparece / erro de acesso?** O App Service precisa **ler** o Key Vault de tickets.
+> Se o `kv-prd-tk-cin-001` estiver em **RBAC**, dê à identidade **"Microsoft Azure App Service"**
+> (app id `abfa0a7c-a6b6-4736-8310-5855508787cd`) as roles **Key Vault Secrets User** **+ Key Vault
+> Certificate User** no cofre; se estiver em **Access Policy**, uma policy de **Get** em **Secrets +
+> Certificates**. Depois volte e importe.
+
+#### 10.5.2 — Apontar o DNS (na sua zona) e adicionar o domínio
+
+1. Frontend → **Settings → Custom domains** → **+ Add custom domain**.
+2. **Domain:** **`bola.<sua-zona>`** → o Portal mostra **os registros de validação** (guarde o
+   **Custom Domain Verification ID**).
+3. Na **sua zona DNS** (Portal → sua zona `<sua-zona>` → **+ Record set**), crie **os dois**:
+
+   | Tipo | Nome | Valor |
+   |---|---|---|
+   | **CNAME** | `bola` | `app-prd-bl-fend-cin-001.azurewebsites.net` |
+   | **TXT** | `asuid.bola` | o **Custom Domain Verification ID** que o Portal exibiu |
+
+4. Volte ao App Service → **Validate** → **Add**. _(Falhou a validação? Aguarde 1–2 min pela
+   propagação do DNS e tente de novo.)_
+
+#### 10.5.3 — Vincular o certificado (ligar o HTTPS)
+
+1. Ainda em **Custom domains**, na linha do `bola.<sua-zona>` → **Add binding** (ícone de cadeado).
+2. **TLS/SSL type:** **SNI SSL** · **Certificate:** o **wildcard** importado na 10.5.1 → **Add**.
+3. **HTTPS Only** já está ligado (Fase 6.3). Teste no navegador:
+   **`https://bola.<sua-zona>`** → o site carrega com **cadeado válido**. ✅
+
+#### 10.5.4 — Anotar para o fechamento (Fase 11)
+
+- Agora o frontend responde em **duas** URLs: a `.azurewebsites.net` **e** a `bola.<sua-zona>`.
+- Enquanto o **CORS está `*`**, tudo funciona. Mas na **Fase 11** (fechar o CORS), a origem permitida
+  na API (`CORS_ORIGINS`) deve ser **`https://bola.<sua-zona>`** (o domínio custom), **não** a
+  `.azurewebsites.net`. O mesmo vale para o **`API_ORIGIN`** do front (CSP) se você fechar o CSP.
+- A **`VITE_API_BASE_URL`** (URL da **API**) **não muda** — o domínio custom é só do frontend.
+
+> ✅ **Pronto quando:** `https://bola.<sua-zona>` abre o site com **cadeado válido**.
+
+---
+
 ### 🔒 Fase 11 — Fechar o ambiente por partes (uma porta de cada vez)
 
 > 🎯 **O passo final de produção.** Até aqui está **tudo aberto** (CORS `*`, Cosmos público, sem
@@ -1295,6 +1359,9 @@ A porta mais barata de fechar primeiro: parar de aceitar **qualquer** origem.
    settings** → edite `CORS_ORIGINS`:
    - de `*`
    - para `https://app-prd-bl-fend-cin-001.azurewebsites.net` **(sem barra `/` no fim)**
+   - 🌐 **Fez a Fase 10.5 (domínio custom)?** Então use o **domínio próprio** como origem:
+     `https://bola.<sua-zona>` (é a URL pela qual o usuário acessa o site). Se usar os dois (custom +
+     azurewebsites), separe por vírgula.
 2. **Apply / Save** (a API reinicia).
 
 > ⚠️ **Sem a barra final!** `CORS_ORIGINS` precisa bater **exatamente** com a origem do
